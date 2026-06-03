@@ -594,7 +594,11 @@ async function loadAllData(){
     PEDIDOS = (pedsRes.data||[]).map(p=>({...p,lineas:p.order_lines||[],clienteId:p.cliente_id,clienteNombre:p.cliente_nombre,userId:p.user_id,userName:p.user_name,fechaISO:p.fecha_iso,montofacturado:p.monto_facturado,dtoFijo:p.dto_fijo,dtoExtra:p.dto_extra,razonSocial:p.razon_social}));
     METAS = (metasRes.data||[]).map(m=>({...m,supId:m.sup_id,supName:m.sup_name,distClientes:m.dist_clientes||[]}));
     USERS = USERS.map(u=>({...u, firstLogin: u.first_login, supervisorId: u.supervisor_id}));
-    CLIENTS = CLIENTS.map(c=>({...c, supervisorId: c.supervisor_id}));
+    CLIENTS = CLIENTS.map(c=>{
+      let dep=c.departamento;
+      if(!dep){ for(const k in c){ if(/depart|depto/i.test(k) && c[k]){ dep=c[k]; break; } } }
+      return {...c, supervisorId: c.supervisor_id, departamento: (dep||"")};
+    });
     PEDIDOS.forEach(p=>{p.lineas = p.lineas.map(l=>({...l,productoId:l.producto_id,dtoFijo:l.dto_fijo,dtoEsp:l.dto_esp}));});
   } catch(e) {
     toast("Error al cargar datos: "+e.message, "error", 6000);

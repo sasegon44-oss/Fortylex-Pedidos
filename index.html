@@ -215,7 +215,7 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
       <div class="login-title">PedidosForty</div>
       <div class="login-sub">Gestión comercial · Fortylex</div>
     </div>
-    <div id="change-pass-banner" class="change-pass-banner" style="display:none">🔐 <strong>Primera vez en el sistema.</strong> Debés cambiar tu contraseña antes de continuar.</div>
+    <div id="change-pass-banner" class="change-pass-banner" style="display:none">🔐 <strong>Primera vez en el sistema.</strong> Podés cambiar tu contraseña ahora o seguir con la actual.</div>
     <div id="login-form">
       <div class="form-group"><label class="form-label">Correo electrónico</label><input type="email" id="login-email" placeholder="tu@email.com" autocomplete="email"></div>
       <div class="form-group"><label class="form-label">Contraseña</label><input type="password" id="login-pass" placeholder="Tu contraseña" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
@@ -224,10 +224,11 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
       <div style="text-align:center;margin-top:12px"><button onclick="showForgotPass()" style="background:none;border:none;color:var(--accent);font-size:12px;cursor:pointer;text-decoration:underline">¿Olvidé mi contraseña?</button></div>
     </div>
     <div id="first-login-form" style="display:none">
-      <div class="form-group"><label class="form-label">Nueva contraseña <span class="required-star">*</span></label><input type="password" id="new-pass1" placeholder="Mínimo 6 caracteres"></div>
-      <div class="form-group"><label class="form-label">Confirmar contraseña <span class="required-star">*</span></label><input type="password" id="new-pass2" placeholder="Repetí la contraseña"></div>
+      <div class="form-group"><label class="form-label">Nueva contraseña</label><input type="password" id="new-pass1" placeholder="Mínimo 6 caracteres"></div>
+      <div class="form-group"><label class="form-label">Confirmar contraseña</label><input type="password" id="new-pass2" placeholder="Repetí la contraseña"></div>
       <div id="pass-err" style="color:var(--accent);font-size:12px;margin-bottom:10px;display:none"></div>
-      <button class="btn btn-primary" style="width:100%;justify-content:center;padding:11px" onclick="doFirstLogin()">Establecer contraseña y entrar</button>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;padding:11px" onclick="doFirstLogin()">Cambiar contraseña y entrar</button>
+      <button class="btn btn-ghost" style="width:100%;justify-content:center;padding:10px;margin-top:8px" onclick="keepCurrentPass()">Mantener la actual y entrar</button>
     </div>
     <div id="forgot-form" style="display:none">
       <div class="form-group"><label class="form-label">Correo electrónico registrado</label><input type="email" id="forgot-email" placeholder="tu@email.com"></div>
@@ -827,6 +828,16 @@ async function doFirstLogin(){
     pendingFirstLoginUser.password=p1; pendingFirstLoginUser.first_login=false;
     await enterApp(pendingFirstLoginUser); pendingFirstLoginUser=null;
   } catch(e){ toast("Error al actualizar contraseña: "+e.message,"error"); }
+  hideLoading();
+}
+async function keepCurrentPass(){
+  if(!pendingFirstLoginUser) return;
+  setLoading("Ingresando...");
+  try {
+    if(!DEMO_MODE){ await db.from("users").update({first_login:false}).eq("id",pendingFirstLoginUser.id); }
+    pendingFirstLoginUser.first_login=false;
+    await enterApp(pendingFirstLoginUser); pendingFirstLoginUser=null;
+  } catch(e){ toast("Error al ingresar: "+e.message,"error"); }
   hideLoading();
 }
 async function doForgotPass(){

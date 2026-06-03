@@ -8,6 +8,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
@@ -460,9 +461,10 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
   <div class="modal" style="width:480px">
     <div class="flex-between mb-4"><div class="modal-title" id="modal-user-title">Nuevo usuario</div><button class="btn btn-ghost btn-sm" onclick="closeModal('modal-usuario')">✕</button></div>
     <div class="grid-2"><div class="form-group"><label class="form-label">Nombre <span class="required-star">*</span></label><input type="text" id="user-nombre"></div><div class="form-group"><label class="form-label">Apellido <span class="required-star">*</span></label><input type="text" id="user-apellido"></div></div>
-    <div class="grid-2"><div class="form-group"><label class="form-label">Correo <span class="required-star">*</span></label><input type="email" id="user-email"></div><div class="form-group"><label class="form-label">Contraseña inicial <span class="required-star">*</span></label><input type="password" id="user-pass" placeholder="El usuario deberá cambiarla"></div></div>
+    <div class="grid-2"><div class="form-group"><label class="form-label">Correo <span class="required-star">*</span></label><input type="email" id="user-email"></div><div class="form-group"><label class="form-label">Contraseña inicial</label><div class="flex" style="gap:6px"><input type="text" id="user-pass" placeholder="Se genera sola si la dejás vacía"><button type="button" class="btn btn-ghost btn-sm" title="Generar contraseña" onclick="document.getElementById('user-pass').value=genTempPassword()">🎲</button></div></div></div>
     <div class="grid-2"><div class="form-group"><label class="form-label">Rol</label><select id="user-rol"><option value="supervisor">Supervisor</option><option value="vendedor">Vendedor</option></select></div><div class="form-group"><label class="form-label">Estado</label><select id="user-status"><option value="active">Activo</option><option value="inactive">Inactivo</option></select></div></div>
     <div class="form-group"><label class="form-label">Reporta a (supervisor)</label><div class="ss-wrap" id="ss-user-sup"></div></div>
+    <div class="form-group" id="invite-row"><label class="flex" style="gap:8px;cursor:pointer;font-size:12.5px;color:var(--text2)"><input type="checkbox" id="user-send-invite" checked style="width:auto"> Enviar invitación por email con las credenciales</label></div>
     <div class="flex" style="justify-content:flex-end;gap:8px"><button class="btn btn-ghost" onclick="closeModal('modal-usuario')">Cancelar</button><button class="btn btn-primary" id="btn-save-user" onclick="saveUser()">Guardar usuario</button></div>
   </div>
 </div>
@@ -486,10 +488,26 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
 // ════════════════════════════════════════════════
 // SUPABASE CONFIG
 // ════════════════════════════════════════════════
-const SUPABASE_URL = 'https://hilahnjftpybjfkyvgxl.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhpbGFobmpmdHB5Ympma3l2Z3hsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0OTA3MjQsImV4cCI6MjA5NjA2NjcyNH0.rPh18OxH6e34QqbtCfStUt30ew8d2YGtdS8C7EcVuAw';
+const SUPABASE_URL = 'https://epyvdepuhamblxkeexhu.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVweXZkZXB1aGFtYmx4a2VleGh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNjExOTcsImV4cCI6MjA5NTYzNzE5N30.3AxgKyZpkpOMewBGomARTXLoPM4idIxlCbdbBP47a28';
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ════════════════════════════════════════════════
+// EMAILJS — envío de invitaciones por correo
+// Completá estos 3 valores con los de tu cuenta de EmailJS (emailjs.com)
+// ════════════════════════════════════════════════
+const EMAILJS_PUBLIC_KEY  = 'TU_PUBLIC_KEY';
+const EMAILJS_SERVICE_ID  = 'TU_SERVICE_ID';
+const EMAILJS_TEMPLATE_ID = 'TU_TEMPLATE_ID';
+function EMAILJS_READY(){ return typeof emailjs!=='undefined' && EMAILJS_PUBLIC_KEY!=='TU_PUBLIC_KEY' && EMAILJS_SERVICE_ID!=='TU_SERVICE_ID' && EMAILJS_TEMPLATE_ID!=='TU_TEMPLATE_ID'; }
+try { if(typeof emailjs!=='undefined' && EMAILJS_PUBLIC_KEY!=='TU_PUBLIC_KEY') emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY }); } catch(e){ console.warn('EmailJS init:', e); }
+function genTempPassword(){ const chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'; let p=''; for(let i=0;i<10;i++) p+=chars[Math.floor(Math.random()*chars.length)]; return p; }
+async function sendInviteEmail(toEmail, toName, password){
+  if(!EMAILJS_READY()) throw new Error('EmailJS no configurado');
+  const loginUrl = window.location.origin + window.location.pathname;
+  return emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, { to_email: toEmail, email: toEmail, to_name: toName||toEmail, password: password, login_url: loginUrl });
+}
 
 const DEPTOS_UY=["Artigas","Canelones","Cerro Largo","Colonia","Durazno","Flores","Florida","Lavalleja","Maldonado","Montevideo","Paysandú","Río Negro","Rivera","Rocha","Salto","San José","Soriano","Tacuarembó","Treinta y Tres"];
 const LINEAS_NEGOCIO=["KENVUE","ADES","FORTYLEX","AYUDIN"];
@@ -1219,30 +1237,49 @@ function renderAdmUsuarios(){
 function openUserModal(id=null){
   editingUserId=id;
   const sups=USERS.filter(u=>u.role==="supervisor").map(u=>({value:u.id,label:userName(u)}));
+  const inviteRow=document.getElementById("invite-row");
   if(id){
     const u=USERS.find(x=>x.id===id); document.getElementById("modal-user-title").textContent="Editar usuario";
     document.getElementById("user-nombre").value=u.nombre; document.getElementById("user-apellido").value=u.apellido||"";
     document.getElementById("user-email").value=u.email; document.getElementById("user-pass").value="";
     document.getElementById("user-pass").placeholder="Dejar vacío para no cambiar";
     document.getElementById("user-rol").value=u.role; document.getElementById("user-status").value=u.status;
+    if(inviteRow) inviteRow.style.display="none"; document.getElementById("user-send-invite").checked=false;
     ssCreate("ss-user-sup",sups,u.supervisorId||"",()=>{},"Reporta a...",true);
   } else {
     document.getElementById("modal-user-title").textContent="Nuevo usuario";
     document.getElementById("user-nombre").value=""; document.getElementById("user-apellido").value="";
     document.getElementById("user-email").value=""; document.getElementById("user-pass").value="";
-    document.getElementById("user-pass").placeholder="Contraseña inicial";
+    document.getElementById("user-pass").placeholder="Se genera sola si la dejás vacía";
     document.getElementById("user-rol").selectedIndex=0; document.getElementById("user-status").value="active";
+    if(inviteRow) inviteRow.style.display="block"; document.getElementById("user-send-invite").checked=true;
     ssCreate("ss-user-sup",sups,"",()=>{},"Reporta a...",true);
   }
   document.getElementById("modal-usuario").classList.add("open");
 }
 async function saveUser(){
-  const nombre=document.getElementById("user-nombre").value.trim(), apellido=document.getElementById("user-apellido").value.trim(), email=document.getElementById("user-email").value.trim(), pass=document.getElementById("user-pass").value;
-  if(!nombre||!apellido||!email||(!editingUserId&&!pass)){ toast("Completá los campos requeridos.","error"); return; }
+  const nombre=document.getElementById("user-nombre").value.trim(), apellido=document.getElementById("user-apellido").value.trim(), email=document.getElementById("user-email").value.trim();
+  let pass=document.getElementById("user-pass").value;
+  if(!nombre||!apellido||!email){ toast("Completá nombre, apellido y correo.","error"); return; }
+  const isNew=!editingUserId;
+  const sendInvite=isNew && document.getElementById("user-send-invite").checked;
+  if(isNew && !pass) pass=genTempPassword();
   const uObj={ nombre, apellido, email, role:document.getElementById("user-rol").value, status:document.getElementById("user-status").value, supervisorId:ssGetValue("ss-user-sup")?Number(ssGetValue("ss-user-sup")):null };
-  if(pass) uObj.password=pass; if(!editingUserId) uObj.firstLogin=true;
+  if(pass) uObj.password=pass;
+  if(isNew) uObj.firstLogin=false;
   setLoading("Guardando usuario...");
-  try { await dbSaveUser(uObj, editingUserId); toast("Usuario guardado","success"); closeModal('modal-usuario'); await loadAllData(); renderAdmUsuarios(); }
+  try {
+    await dbSaveUser(uObj, editingUserId);
+    if(sendInvite){
+      if(DEMO_MODE){ toast("Usuario guardado. En MODO DEMO no se envían correos.","info",6000); }
+      else if(!EMAILJS_READY()){ toast("Usuario guardado, pero EmailJS no está configurado. Contraseña: "+pass,"info",9000); }
+      else {
+        try { await sendInviteEmail(email, nombre, pass); toast("Usuario creado e invitación enviada a "+email,"success",6000); }
+        catch(err){ console.error("EmailJS:",err); toast("Usuario guardado, pero falló el envío del email. Contraseña: "+pass,"error",9000); }
+      }
+    } else { toast("Usuario guardado","success"); }
+    closeModal('modal-usuario'); await loadAllData(); renderAdmUsuarios();
+  }
   catch(e){ toast("Error: "+e.message,"error"); }
   hideLoading();
 }

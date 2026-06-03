@@ -390,13 +390,13 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
     <div class="flex-between mb-4"><div class="modal-title" id="modal-pedido-title">Nuevo pedido</div><button class="btn btn-ghost btn-sm" onclick="closeModal('modal-pedido')">✕</button></div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">
       <div class="form-group" style="margin:0"><label class="form-label">Cliente <span class="required-star">*</span></label><div class="ss-wrap" id="ss-p-cliente"></div></div>
-      <div class="form-group" style="margin:0"><label class="form-label">Distribuidor</label><div class="ss-wrap" id="ss-p-distribuidor"></div></div>
-      <div class="form-group" style="margin:0"><label class="form-label">Departamento</label><input type="text" id="p-depto" readonly class="readonly-field"></div>
+      <div class="form-group" style="margin:0"><label class="form-label">Distribuidor</label><input type="text" id="p-distribuidor" placeholder="Se completa con el cliente"></div>
+      <div class="form-group" style="margin:0"><label class="form-label">Departamento</label><select id="p-depto"></select></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 2fr;gap:10px;margin-bottom:16px">
       <div class="form-group" style="margin:0"><label class="form-label">Dto. fijo %</label><input type="number" id="p-dto-fijo" value="0" min="0" max="100" oninput="onDtoFijoChange()"></div>
       <div class="form-group" style="margin:0"><label class="form-label">Dto. extra general %</label><input type="number" id="p-dto-extra" value="0" min="0" max="100" oninput="renderLineas()"></div>
-      <div></div>
+      <div class="form-group" style="margin:0"><label class="form-label">Razón social (manual)</label><input type="text" id="p-razon-social" placeholder="Escribí la razón social"></div>
     </div>
     <div style="border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:12px"><div style="overflow-x:auto">
       <table class="pedido-table" style="min-width:900px"><thead><tr>
@@ -591,7 +591,7 @@ async function loadAllData(){
     USERS = usersRes.data || [];
     PRODUCTS = prodsRes.data || [];
     CLIENTS = cliRes.data || [];
-    PEDIDOS = (pedsRes.data||[]).map(p=>({...p,lineas:p.order_lines||[],clienteId:p.cliente_id,clienteNombre:p.cliente_nombre,userId:p.user_id,userName:p.user_name,fechaISO:p.fecha_iso,montofacturado:p.monto_facturado,dtoFijo:p.dto_fijo,dtoExtra:p.dto_extra}));
+    PEDIDOS = (pedsRes.data||[]).map(p=>({...p,lineas:p.order_lines||[],clienteId:p.cliente_id,clienteNombre:p.cliente_nombre,userId:p.user_id,userName:p.user_name,fechaISO:p.fecha_iso,montofacturado:p.monto_facturado,dtoFijo:p.dto_fijo,dtoExtra:p.dto_extra,razonSocial:p.razon_social}));
     METAS = (metasRes.data||[]).map(m=>({...m,supId:m.sup_id,supName:m.sup_name,distClientes:m.dist_clientes||[]}));
     USERS = USERS.map(u=>({...u, firstLogin: u.first_login, supervisorId: u.supervisor_id}));
     CLIENTS = CLIENTS.map(c=>({...c, supervisorId: c.supervisor_id}));
@@ -649,7 +649,7 @@ async function dbSaveOrder(pedido, id=null){
     if(i>-1) PEDIDOS[i]={...PEDIDOS[i],...stored}; else PEDIDOS.push(stored);
     return oid;
   }
-  const row={fecha:pedido.fecha,fecha_iso:pedido.fechaISO,user_id:pedido.userId,user_name:pedido.userName,cliente_id:pedido.clienteId,cliente_nombre:pedido.clienteNombre,distribuidor:pedido.distribuidor||"",departamento:pedido.departamento||"",total:pedido.total,monto_facturado:pedido.montofacturado||null,estado:pedido.estado,notas:pedido.notas||"",dto_fijo:pedido.dtoFijo||0,dto_extra:pedido.dtoExtra||0};
+  const row={fecha:pedido.fecha,fecha_iso:pedido.fechaISO,user_id:pedido.userId,user_name:pedido.userName,cliente_id:pedido.clienteId,cliente_nombre:pedido.clienteNombre,distribuidor:pedido.distribuidor||"",departamento:pedido.departamento||"",total:pedido.total,monto_facturado:pedido.montofacturado||null,estado:pedido.estado,notas:pedido.notas||"",dto_fijo:pedido.dtoFijo||0,dto_extra:pedido.dtoExtra||0,razon_social:pedido.razonSocial||""};
   let orderId=id;
   if(id){ const r=await db.from("orders").update(row).eq("id",id); if(r.error) throw r.error; }
   else { row.id=pedido.id; const r=await db.from("orders").insert(row).select().single(); if(r.error) throw r.error; orderId=r.data.id; }
@@ -690,6 +690,8 @@ function initDeptoDropdowns(){
   });
   const cd=document.getElementById("cli-depto");
   if(cd) cd.innerHTML="<option value=''>— Seleccionar —</option>"+DEPTOS_UY.map(d=>`<option value="${d}">${d}</option>`).join("");
+  const pd=document.getElementById("p-depto");
+  if(pd) pd.innerHTML=DEPTOS_UY.map(d=>`<option value="${d}">${d}</option>`).join("");
 }
 
 function ssCreate(containerId,options,selectedValue,onChange,placeholder="Seleccionar...",allowEmpty=true){
@@ -991,7 +993,7 @@ function openNuevoPedido(){
   document.getElementById("modal-pedido-title").textContent="Nuevo pedido";
   const cliOpts=CLIENTS.map(c=>({value:c.id,label:c.nombre+" ("+c.codigo+")"}));
   ssCreate("ss-p-cliente",cliOpts,CLIENTS[0]?.id||"",v=>onClienteChange(v),"Seleccionar cliente...",false);
-  ssCreate("ss-p-distribuidor",buildDistribuidorOptions(),"",()=>{},"Sin distribuidor",true);
+  document.getElementById("p-distribuidor").value=""; document.getElementById("p-razon-social").value="";
   if(CLIENTS[0]) onClienteChange(CLIENTS[0].id);
   document.getElementById("p-dto-extra").value=0; renderLineas();
   document.getElementById("modal-pedido").classList.add("open");
@@ -1001,7 +1003,7 @@ function onClienteChange(val){
   const c=CLIENTS.find(x=>x.id===clienteId);
   document.getElementById("p-dto-fijo").value=c?c.dto:0;
   document.getElementById("p-depto").value=c?c.departamento:"";
-  if(c&&c.distribuidor){ ssCreate("ss-p-distribuidor",buildDistribuidorOptions(),c.distribuidor,()=>{},"Sin distribuidor",true); }
+  document.getElementById("p-distribuidor").value = c ? (c.distribuidor||"") : "";
   renderLineas();
 }
 function onDtoFijoChange(){ const newDto=Number(document.getElementById("p-dto-fijo").value)||0; lineas.forEach(l=>l.dtoFijo=newDto); renderLineas(); }
@@ -1011,7 +1013,7 @@ function editPedido(id){
   document.getElementById("modal-pedido-title").textContent="Editar pedido "+id;
   const cliOpts=CLIENTS.map(c=>({value:c.id,label:c.nombre+" ("+c.codigo+")"}));
   ssCreate("ss-p-cliente",cliOpts,p.clienteId,v=>onClienteChange(v),"Seleccionar cliente...",false);
-  ssCreate("ss-p-distribuidor",buildDistribuidorOptions(),p.distribuidor||"",()=>{},"Sin distribuidor",true);
+  document.getElementById("p-distribuidor").value=p.distribuidor||""; document.getElementById("p-razon-social").value=p.razonSocial||"";
   document.getElementById("p-dto-fijo").value=p.dtoFijo||0;
   document.getElementById("p-dto-extra").value=p.dtoExtra||0;
   document.getElementById("p-depto").value=p.departamento||"";
@@ -1047,7 +1049,7 @@ async function savePedido(){
   const dtoFijo=Number(document.getElementById("p-dto-fijo").value)||0;
   let totalG=0; lineas.forEach(l=>{const sub=l.precio*l.cantidad; totalG+=sub*(1-Number(l.dtoFijo)/100)*(1-Number(l.dtoEsp)/100)*(1-dtoExtra/100);});
   const ex=editingPedidoId?PEDIDOS.find(x=>x.id===editingPedidoId):null;
-  const pObj={ id: editingPedidoId || genId(), fecha: ex?ex.fecha:todayStr(), fechaISO: ex?ex.fechaISO:new Date().toISOString().slice(0,10), userId: ex?ex.userId:currentUser.id, userName: ex?ex.userName:userName(currentUser), clienteId: c.id, clienteNombre: c.nombre, distribuidor: ssGetValue("ss-p-distribuidor")||c.distribuidor||"", departamento: c.departamento, dtoFijo, dtoExtra, total: totalG, montofacturado: ex?ex.montofacturado:null, estado: ex?ex.estado:"Pendiente de corroboración", notas: ex?ex.notas:"", lineas: lineas };
+  const pObj={ id: editingPedidoId || genId(), fecha: ex?ex.fecha:todayStr(), fechaISO: ex?ex.fechaISO:new Date().toISOString().slice(0,10), userId: ex?ex.userId:currentUser.id, userName: ex?ex.userName:userName(currentUser), clienteId: c.id, clienteNombre: c.nombre, distribuidor: (document.getElementById("p-distribuidor").value||"").trim()||c.distribuidor||"", razonSocial: (document.getElementById("p-razon-social").value||"").trim(), departamento: document.getElementById("p-depto").value||c.departamento, dtoFijo, dtoExtra, total: totalG, montofacturado: ex?ex.montofacturado:null, estado: ex?ex.estado:"Pendiente de corroboración", notas: ex?ex.notas:"", lineas: lineas };
   setLoading("Guardando pedido...");
   try { await dbSaveOrder(pObj, editingPedidoId); toast("Pedido guardado con éxito","success"); closeModal('modal-pedido'); await loadAllData(); nav('pedidos'); }
   catch(e){ toast("Error al guardar: "+e.message,"error"); }
@@ -1373,19 +1375,31 @@ function validateAndPreviewImport(data){
   document.getElementById("import-confirm-btn").style.display="inline-flex";
 }
 async function confirmImport(){
-  setLoading("Procesando e insertando datos...");
-  let count=0;
+  const CHUNK=500;
+  let count=0, skipped=0;
+  setLoading("Procesando datos...");
   try {
-    if(importType==="clientes"){
-      for(let row of importParsedData){ if(!row.nombre||!row.codigo)continue; await dbSaveClient({nombre:row.nombre,codigo:String(row.codigo),canal:row.canal||"Almacén",departamento:row.departamento||"Montevideo",direccion:row.direccion||"",distribuidor:row.distribuidor||"",dto:Number(row.dto_fijo)||0,supervisorId:null}); count++; }
-    } else if(importType==="productos"){
-      for(let row of importParsedData){ if(!row.nombre||!row.codigo)continue; await dbSaveProduct({linea:row.linea||"FORTYLEX",marca:row.marca||"",nombre:row.nombre,codigo:String(row.codigo),presentacion:row.presentacion||"",precio:Number(row.precio)||0}); count++; }
-    } else if(importType==="usuarios"){
-      for(let row of importParsedData){ if(!row.email||!row.nombre)continue; await dbSaveUser({nombre:row.nombre,apellido:row.apellido||"",email:row.email,password:String(row.password||"123456"),role:row.rol||"vendedor",status:row.status||"active",firstLogin:true}); count++; }
+    if(DEMO_MODE){
+      for(let row of importParsedData){
+        if(importType==="clientes"){ if(!row.nombre||!row.codigo){skipped++;continue;} await dbSaveClient({nombre:row.nombre,codigo:String(row.codigo),canal:row.canal||"Almacén",departamento:row.departamento||"Montevideo",direccion:row.direccion||"",distribuidor:row.distribuidor||"",dto:Number(row.dto_fijo)||0,supervisorId:null}); count++; }
+        else if(importType==="productos"){ if(!row.nombre||!row.codigo){skipped++;continue;} await dbSaveProduct({linea:row.linea||"FORTYLEX",marca:row.marca||"",nombre:row.nombre,codigo:String(row.codigo),presentacion:row.presentacion||"",precio:Number(row.precio)||0}); count++; }
+        else if(importType==="usuarios"){ if(!row.email||!row.nombre){skipped++;continue;} await dbSaveUser({nombre:row.nombre,apellido:row.apellido||"",email:row.email,password:String(row.password||"123456"),role:row.rol||"vendedor",status:row.status||"active",firstLogin:false}); count++; }
+      }
+    } else {
+      let rows=[], table="";
+      if(importType==="clientes"){ table="clients"; rows=importParsedData.filter(r=>r.nombre&&r.codigo).map(r=>({nombre:r.nombre,codigo:String(r.codigo),canal:r.canal||"Almacén",departamento:r.departamento||"Montevideo",direccion:r.direccion||"",supervisor_id:null,distribuidor:r.distribuidor||"",dto:Number(r.dto_fijo)||0})); }
+      else if(importType==="productos"){ table="products"; rows=importParsedData.filter(r=>r.nombre&&r.codigo).map(r=>({linea:r.linea||"FORTYLEX",marca:r.marca||"",nombre:r.nombre,codigo:String(r.codigo),presentacion:r.presentacion||"",precio:Number(r.precio)||0})); }
+      else if(importType==="usuarios"){ table="users"; rows=importParsedData.filter(r=>r.email&&r.nombre).map(r=>({nombre:r.nombre,apellido:r.apellido||"",email:r.email,password:String(r.password||"123456"),role:r.rol||"vendedor",status:r.status||"active",first_login:false})); }
+      skipped=importParsedData.length-rows.length;
+      for(let i=0;i<rows.length;i+=CHUNK){
+        const chunk=rows.slice(i,i+CHUNK);
+        setLoading(`Insertando ${i+1}–${Math.min(i+CHUNK,rows.length)} de ${rows.length}...`);
+        const r=await db.from(table).insert(chunk); if(r.error) throw r.error; count+=chunk.length;
+      }
     }
-    toast(`¡Importación exitosa! Se cargaron ${count} registros.`,"success");
+    toast(`¡Importación exitosa! Se cargaron ${count} registros${skipped?` (${skipped} omitidos por faltar datos)`:""}.`,"success",6000);
     closeModal('modal-import'); await loadAllData(); nav(importType==="clientes"?'clientes':'admin');
-  } catch(e){ toast("Error durante la inserción: "+e.message,"error"); }
+  } catch(e){ toast("Error durante la inserción: "+e.message,"error",8000); console.error(e); }
   hideLoading();
 }
 function downloadTemplate(){

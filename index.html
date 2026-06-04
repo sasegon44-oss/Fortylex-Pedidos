@@ -144,7 +144,7 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
 .pedido-table th{font-size:9.5px;padding:8px 6px;white-space:nowrap;background:var(--navy);color:rgba(255,255,255,0.85)}
 .pedido-table td{padding:5px 4px;vertical-align:middle;border-bottom:1px solid var(--border)}
 .pedido-table tr:last-child td{border-bottom:none}
-.col-num{width:28px}.col-linea{width:110px}.col-marca{width:80px}.col-prod{width:160px}.col-cod{width:80px}.col-pres{width:90px}.col-precio{width:80px}.col-dtofijo{width:68px}.col-dtoesp{width:68px}.col-cant{width:68px}.col-unidad{width:84px}.col-subtotal{width:80px}.col-total{width:88px}.col-obs{width:80px}.col-del{width:32px}
+.col-num{width:28px}.col-linea{width:110px}.col-marca{width:80px}.col-prod{width:160px}.col-cod{width:80px}.col-pres{width:90px}.col-precio{width:80px}.col-dtofijo{width:68px}.col-dtoesp{width:68px}.col-cant{width:68px}.col-unidad{width:116px}.col-subtotal{width:80px}.col-total{width:88px}.col-obs{width:80px}.col-del{width:32px}
 .num-inp{width:100%;text-align:right;padding:5px 6px;font-size:13px;font-weight:600;color:var(--navy);background:var(--white);border:1px solid var(--border);border-radius:6px;-moz-appearance:textfield}
 .num-inp::-webkit-outer-spin-button,.num-inp::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .num-inp:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-glow);outline:none}
@@ -382,7 +382,7 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
 </div>
 
 <div class="modal-overlay" id="modal-pedido">
-  <div class="modal" style="width:1100px">
+  <div class="modal" style="width:1320px">
     <div class="flex-between mb-4"><div class="modal-title" id="modal-pedido-title">Nuevo pedido</div><button class="btn btn-ghost btn-sm" onclick="closeModal('modal-pedido')">✕</button></div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">
       <div class="form-group" style="margin:0"><label class="form-label">Cliente <span class="required-star">*</span></label><div class="ss-wrap" id="ss-p-cliente"></div></div>
@@ -396,8 +396,8 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
       <div class="form-group" style="margin:0"><label class="form-label">Razón social (manual)</label><input type="text" id="p-razon-social" placeholder="Escribí la razón social"></div>
     </div>
     <div style="border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:12px"><div style="overflow-x:auto">
-      <table class="pedido-table" style="min-width:900px"><thead><tr>
-        <th class="col-num">#</th><th class="col-linea">Línea</th><th class="col-marca">Marca</th><th class="col-prod">Producto</th><th class="col-cod">Cód. Fact.</th><th class="col-pres">Presentación</th><th class="col-precio">Precio s/IVA</th><th class="col-dtofijo">Dto.Fijo%</th><th class="col-dtoesp">Dto.Esp.%</th><th class="col-cant">Cant.</th><th class="col-unidad">Unidad</th><th class="col-subtotal">Subtotal</th><th class="col-total">Total c/dto</th><th class="col-obs">Observ.</th><th class="col-del"></th>
+      <table class="pedido-table" style="min-width:1180px"><thead><tr>
+        <th class="col-num">#</th><th class="col-linea">Línea</th><th class="col-marca">Marca</th><th class="col-prod">Producto</th><th class="col-cod">Cód. Fact.</th><th class="col-pres">Presentación</th><th class="col-precio">Precio s/IVA</th><th class="col-dtofijo">Dto.Fijo%</th><th class="col-dtoesp">Dto.Esp.%</th><th class="col-cant">Cant.</th><th class="col-unidad">Unidad de venta</th><th class="col-subtotal">Subtotal</th><th class="col-total">Total c/dto</th><th class="col-obs">Observ.</th><th class="col-del"></th>
       </tr></thead><tbody id="lineas-body"></tbody></table><datalist id="unidades-datalist"><option value="Unidad"></option><option value="Caja"></option><option value="Bulto"></option><option value="Pack"></option><option value="Display"></option><option value="Docena"></option><option value="Kg"></option><option value="Litro"></option></datalist>
     </div></div>
     <div class="flex-between">

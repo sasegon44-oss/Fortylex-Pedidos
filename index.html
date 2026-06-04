@@ -393,7 +393,8 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
       <div class="form-group" style="margin:0"><label class="form-label">Distribuidor</label><input type="text" id="p-distribuidor" placeholder="Se completa con el cliente"></div>
       <div class="form-group" style="margin:0"><label class="form-label">Departamento</label><input type="text" id="p-depto" list="deptos-datalist" placeholder="Departamento" autocomplete="off"><datalist id="deptos-datalist"></datalist></div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 2fr;gap:10px;margin-bottom:16px">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 2fr;gap:10px;margin-bottom:16px">
+      <div class="form-group" style="margin:0"><label class="form-label">Fecha</label><input type="date" id="p-fecha"></div>
       <div class="form-group" style="margin:0"><label class="form-label">Dto. fijo %</label><input type="number" id="p-dto-fijo" value="0" min="0" max="100" oninput="onDtoFijoChange()"></div>
       <div class="form-group" style="margin:0"><label class="form-label">Dto. extra general %</label><input type="number" id="p-dto-extra" value="0" min="0" max="100" oninput="renderLineas()"></div>
       <div class="form-group" style="margin:0"><label class="form-label">Razón social (manual)</label><input type="text" id="p-razon-social" placeholder="Escribí la razón social"></div>
@@ -562,6 +563,7 @@ const isAdmin=()=>currentUser?.role==="administrador";
 const isSup=()=>currentUser?.role==="supervisor";
 const isVendedor=()=>currentUser?.role==="vendedor";
 const todayStr=()=>new Date().toLocaleDateString("es-AR");
+const todayISO=()=>{const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);};
 const userName=u=>u?u.nombre+" "+(u.apellido||""):"—";
 const userInitials=u=>u?(u.nombre[0]+((u.apellido||"")[0]||"")).toUpperCase():"?";
 const escHtml=s=>String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
@@ -998,6 +1000,7 @@ function openNuevoPedido(){
   const cliOpts=CLIENTS.map(c=>({value:c.id,label:c.nombre+" ("+c.codigo+")"}));
   ssCreate("ss-p-cliente",cliOpts,CLIENTS[0]?.id||"",v=>onClienteChange(v),"Seleccionar cliente...",false);
   document.getElementById("p-distribuidor").value=""; document.getElementById("p-razon-social").value="";
+  document.getElementById("p-fecha").max=todayISO(); document.getElementById("p-fecha").value=todayISO();
   if(CLIENTS[0]) onClienteChange(CLIENTS[0].id);
   document.getElementById("p-dto-extra").value=0; renderLineas();
   document.getElementById("modal-pedido").classList.add("open");
@@ -1018,6 +1021,7 @@ function editPedido(id){
   const cliOpts=CLIENTS.map(c=>({value:c.id,label:c.nombre+" ("+c.codigo+")"}));
   ssCreate("ss-p-cliente",cliOpts,p.clienteId,v=>onClienteChange(v),"Seleccionar cliente...",false);
   document.getElementById("p-distribuidor").value=p.distribuidor||""; document.getElementById("p-razon-social").value=p.razonSocial||"";
+  document.getElementById("p-fecha").max=todayISO(); document.getElementById("p-fecha").value=p.fechaISO||todayISO();
   document.getElementById("p-dto-fijo").value=p.dtoFijo||0;
   document.getElementById("p-dto-extra").value=p.dtoExtra||0;
   document.getElementById("p-depto").value=p.departamento||"";
@@ -1048,12 +1052,15 @@ async function savePedido(){
   if(!lineas.length){ toast("El pedido no tiene líneas","error"); return; }
   const invalid=lineas.findIndex(l=>!l.productoId);
   if(invalid!==-1){ toast(`Línea ${invalid+1}: debés seleccionar un producto`,"error"); return; }
+  const fIso=document.getElementById("p-fecha").value||todayISO();
+  if(fIso>todayISO()){ toast("La fecha no puede ser futura.","error"); return; }
+  const fDisp=new Date(fIso+"T00:00:00").toLocaleDateString("es-AR");
   const c=CLIENTS.find(x=>x.id===Number(clienteId));
   const dtoExtra=Number(document.getElementById("p-dto-extra").value)||0;
   const dtoFijo=Number(document.getElementById("p-dto-fijo").value)||0;
   let totalG=0; lineas.forEach(l=>{const sub=l.precio*l.cantidad; totalG+=sub*(1-Number(l.dtoFijo)/100)*(1-Number(l.dtoEsp)/100)*(1-dtoExtra/100);});
   const ex=editingPedidoId?PEDIDOS.find(x=>x.id===editingPedidoId):null;
-  const pObj={ id: editingPedidoId || genId(), fecha: ex?ex.fecha:todayStr(), fechaISO: ex?ex.fechaISO:new Date().toISOString().slice(0,10), userId: ex?ex.userId:currentUser.id, userName: ex?ex.userName:userName(currentUser), clienteId: c.id, clienteNombre: c.nombre, distribuidor: (document.getElementById("p-distribuidor").value||"").trim()||c.distribuidor||"", razonSocial: (document.getElementById("p-razon-social").value||"").trim(), departamento: document.getElementById("p-depto").value||c.departamento, dtoFijo, dtoExtra, total: totalG, montofacturado: ex?ex.montofacturado:null, estado: ex?ex.estado:"Pendiente de corroboración", notas: ex?ex.notas:"", lineas: lineas };
+  const pObj={ id: editingPedidoId || genId(), fecha: fDisp, fechaISO: fIso, userId: ex?ex.userId:currentUser.id, userName: ex?ex.userName:userName(currentUser), clienteId: c.id, clienteNombre: c.nombre, distribuidor: (document.getElementById("p-distribuidor").value||"").trim()||c.distribuidor||"", razonSocial: (document.getElementById("p-razon-social").value||"").trim(), departamento: document.getElementById("p-depto").value||c.departamento, dtoFijo, dtoExtra, total: totalG, montofacturado: ex?ex.montofacturado:null, estado: ex?ex.estado:"Pendiente de corroboración", notas: ex?ex.notas:"", lineas: lineas };
   setLoading("Guardando pedido...");
   try { await dbSaveOrder(pObj, editingPedidoId); toast("Pedido guardado con éxito","success"); closeModal('modal-pedido'); await loadAllData(); nav('pedidos'); }
   catch(e){ toast("Error al guardar: "+e.message,"error"); }

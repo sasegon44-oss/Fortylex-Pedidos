@@ -141,7 +141,9 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
 .change-pass-banner{background:linear-gradient(135deg,#ffe4e4,#fff5f5);border:1px solid #ffb3b3;border-radius:10px;padding:14px 16px;margin-bottom:16px;font-size:12.5px;color:var(--crimson2)}
 .diff-pos{color:var(--accent);font-weight:700}.diff-neg{color:var(--green);font-weight:700}.diff-ok{color:var(--green);font-weight:700}
 .pedido-table{table-layout:fixed;width:100%}
-.pedido-table th{font-size:9.5px;padding:8px 6px;white-space:nowrap;background:var(--navy);color:rgba(255,255,255,0.85)}
+.pedido-table th{font-size:9.5px;padding:8px 6px;white-space:normal;word-break:break-word;background:var(--navy);color:rgba(255,255,255,0.85);position:relative;vertical-align:middle}
+.col-resizer{position:absolute;top:0;right:0;width:7px;height:100%;cursor:col-resize;user-select:none;z-index:2}
+.col-resizer:hover{background:rgba(255,255,255,0.35)}
 .pedido-table td{padding:5px 4px;vertical-align:middle;border-bottom:1px solid var(--border)}
 .pedido-table tr:last-child td{border-bottom:none}
 .col-num{width:28px}.col-linea{width:110px}.col-marca{width:80px}.col-prod{width:160px}.col-cod{width:80px}.col-pres{width:90px}.col-precio{width:80px}.col-dtofijo{width:68px}.col-dtoesp{width:68px}.col-cant{width:68px}.col-unidad{width:116px}.col-subtotal{width:80px}.col-total{width:88px}.col-obs{width:80px}.col-del{width:32px}
@@ -999,7 +1001,7 @@ function openNuevoPedido(){
   document.getElementById("p-fecha").max=todayISO(); document.getElementById("p-fecha").value=todayISO();
   if(CLIENTS[0]) onClienteChange(CLIENTS[0].id);
   document.getElementById("p-dto-extra").value=0; renderLineas();
-  document.getElementById("modal-pedido").classList.add("open");
+  document.getElementById("modal-pedido").classList.add("open"); initColResizers();
 }
 function onClienteChange(val){
   const clienteId=Number(val||ssGetValue("ss-p-cliente"));
@@ -1021,7 +1023,7 @@ function editPedido(id){
   document.getElementById("p-dto-fijo").value=p.dtoFijo||0;
   document.getElementById("p-dto-extra").value=p.dtoExtra||0;
   document.getElementById("p-depto").value=p.departamento||"";
-  renderLineas(); document.getElementById("modal-pedido").classList.add("open");
+  renderLineas(); document.getElementById("modal-pedido").classList.add("open"); initColResizers();
 }
 function addLinea(){ const dtoFijo=Number(document.getElementById("p-dto-fijo").value)||0; lineas.push({linea:"",productoId:"",nombre:"",codigo:"",marca:"",presentacion:"",precio:0,dtoFijo,dtoEsp:0,cantidad:1,unidad:"",obs:""}); renderLineas(); }
 function removeLinea(idx){lineas.splice(idx,1); renderLineas();}
@@ -1030,6 +1032,23 @@ function updateLineaField(idx,field,val){
   else if(field==="productoId"){ const prod=PRODUCTS.find(p=>String(p.id)===String(val)); if(prod){ lineas[idx].productoId=prod.id; lineas[idx].nombre=prod.nombre; lineas[idx].codigo=prod.codigo; lineas[idx].marca=prod.marca; lineas[idx].presentacion=prod.presentacion; lineas[idx].precio=prod.precio; } }
   else { lineas[idx][field]=val; }
   renderLineas();
+}
+function initColResizers(){
+  const table=document.querySelector('#modal-pedido .pedido-table');
+  if(!table) return;
+  table.querySelectorAll('thead th').forEach(th=>{
+    if(th.querySelector('.col-resizer')) return;
+    const r=document.createElement('div'); r.className='col-resizer';
+    th.appendChild(r);
+    r.addEventListener('mousedown', e=>{
+      e.preventDefault(); e.stopPropagation();
+      const startX=e.pageX, startW=th.offsetWidth;
+      document.body.style.cursor='col-resize';
+      function onMove(ev){ const w=Math.max(40, startW+(ev.pageX-startX)); th.style.width=w+'px'; }
+      function onUp(){ document.removeEventListener('mousemove',onMove); document.removeEventListener('mouseup',onUp); document.body.style.cursor=''; }
+      document.addEventListener('mousemove',onMove); document.addEventListener('mouseup',onUp);
+    });
+  });
 }
 function renderLineas(){
   const tbody=document.getElementById("lineas-body"); if(!tbody)return;

@@ -374,7 +374,7 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
         </div>
         <div id="adm-productos" style="display:none">
           <div class="flex-between mb-4"><span style="font-size:12px;color:var(--text2)">Catálogo de productos</span><div class="flex"><button class="btn btn-ghost btn-sm" onclick="openImportModal('productos')">⬆ Importar Excel</button><button class="btn btn-primary btn-sm" onclick="openProductoModal()">+ Nuevo producto</button></div></div>
-          <div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table><thead><tr><th>Línea</th><th>Marca</th><th>Producto</th><th>Código</th><th>Presentación</th><th>Precio</th><th></th></tr></thead><tbody id="tbody-adm-productos"></tbody></table></div></div>
+          <div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table><thead><tr><th>Línea</th><th>Marca</th><th>Producto</th><th>Código</th><th>Presentación</th><th>Unidad de venta</th><th>Precio</th><th></th></tr></thead><tbody id="tbody-adm-productos"></tbody></table></div></div>
         </div>
       </div>
       <div id="screen-perfil" class="screen"><div id="perfil-body"></div></div>
@@ -453,6 +453,7 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
     <div class="grid-2"><div class="form-group"><label class="form-label">Línea de Negocio</label><select id="prod-linea"><option>KENVUE</option><option>ADES</option><option>FORTYLEX</option><option>AYUDIN</option></select></div><div class="form-group"><label class="form-label">Marca</label><input type="text" id="prod-marca"></div></div>
     <div class="grid-2"><div class="form-group"><label class="form-label">Nombre</label><input type="text" id="prod-nombre"></div><div class="form-group"><label class="form-label">Código de Facturación</label><input type="text" id="prod-codigo"></div></div>
     <div class="grid-2"><div class="form-group"><label class="form-label">Presentación</label><input type="text" id="prod-presentacion"></div><div class="form-group"><label class="form-label">Precio s/IVA ($)</label><input type="number" id="prod-precio"></div></div>
+    <div class="form-group"><label class="form-label">Unidad de venta</label><input type="text" id="prod-unidad" list="unidades-datalist" placeholder="Caja, bulto, unidad..."></div>
     <div class="flex" style="justify-content:flex-end;gap:8px"><button class="btn btn-ghost" onclick="closeModal('modal-producto')">Cancelar</button><button class="btn btn-primary" id="btn-save-prod" onclick="saveProducto()">Guardar</button></div>
   </div>
 </div>
@@ -635,11 +636,11 @@ async function dbDeleteClient(id){ if(DEMO_MODE){CLIENTS=CLIENTS.filter(c=>c.id!
 
 async function dbSaveProduct(obj, id=null){
   if(DEMO_MODE){
-    if(id){ const i=PRODUCTS.findIndex(p=>p.id===id); if(i>-1){PRODUCTS[i]={...PRODUCTS[i],linea:obj.linea,marca:obj.marca||"",nombre:obj.nombre,codigo:obj.codigo,presentacion:obj.presentacion||"",precio:Number(obj.precio)||0};} return PRODUCTS[i]; }
-    const np={id:Date.now(),linea:obj.linea,marca:obj.marca||"",nombre:obj.nombre,codigo:obj.codigo,presentacion:obj.presentacion||"",precio:Number(obj.precio)||0};
+    if(id){ const i=PRODUCTS.findIndex(p=>p.id===id); if(i>-1){PRODUCTS[i]={...PRODUCTS[i],linea:obj.linea,marca:obj.marca||"",nombre:obj.nombre,codigo:obj.codigo,presentacion:obj.presentacion||"",precio:Number(obj.precio)||0,unidad:obj.unidad||""};} return PRODUCTS[i]; }
+    const np={id:Date.now(),linea:obj.linea,marca:obj.marca||"",nombre:obj.nombre,codigo:obj.codigo,presentacion:obj.presentacion||"",precio:Number(obj.precio)||0,unidad:obj.unidad||""};
     PRODUCTS.push(np); return np;
   }
-  const row={linea:obj.linea,marca:obj.marca||"",nombre:obj.nombre,codigo:obj.codigo,presentacion:obj.presentacion||"",precio:Number(obj.precio)||0};
+  const row={linea:obj.linea,marca:obj.marca||"",nombre:obj.nombre,codigo:obj.codigo,presentacion:obj.presentacion||"",precio:Number(obj.precio)||0,unidad:obj.unidad||""};
   let res; if(id){ res=await db.from("products").update(row).eq("id",id).select().single(); } else { res=await db.from("products").insert(row).select().single(); }
   if(res.error) throw res.error; return res.data;
 }
@@ -1029,7 +1030,7 @@ function addLinea(){ const dtoFijo=Number(document.getElementById("p-dto-fijo").
 function removeLinea(idx){lineas.splice(idx,1); renderLineas();}
 function updateLineaField(idx,field,val){
   if(field==="linea"){ lineas[idx].linea=val; lineas[idx].productoId=""; lineas[idx].nombre=""; lineas[idx].codigo=""; lineas[idx].marca=""; lineas[idx].presentacion=""; lineas[idx].precio=0; }
-  else if(field==="productoId"){ const prod=PRODUCTS.find(p=>String(p.id)===String(val)); if(prod){ lineas[idx].productoId=prod.id; lineas[idx].nombre=prod.nombre; lineas[idx].codigo=prod.codigo; lineas[idx].marca=prod.marca; lineas[idx].presentacion=prod.presentacion; lineas[idx].precio=prod.precio; } }
+  else if(field==="productoId"){ const prod=PRODUCTS.find(p=>String(p.id)===String(val)); if(prod){ lineas[idx].productoId=prod.id; lineas[idx].nombre=prod.nombre; lineas[idx].codigo=prod.codigo; lineas[idx].marca=prod.marca; lineas[idx].presentacion=prod.presentacion; lineas[idx].precio=prod.precio; if(prod.unidad) lineas[idx].unidad=prod.unidad; } }
   else { lineas[idx][field]=val; }
   renderLineas();
 }
@@ -1335,7 +1336,7 @@ async function deleteUser(id){
   hideLoading();
 }
 function renderAdmProductos(){
-  document.getElementById("tbody-adm-productos").innerHTML=PRODUCTS.map(p=>`<tr><td><span class="badge badge-crimson">${p.linea}</span></td><td>${escHtml(p.marca||"—")}</td><td><strong>${escHtml(p.nombre)}</strong></td><td class="mono">${p.codigo}</td><td>${escHtml(p.presentacion||"—")}</td><td class="mono" style="font-weight:600">$${fmt(p.precio)}</td><td><div class="flex"><button class="btn btn-ghost btn-sm" onclick="openProductoModal(${p.id})">✏</button><button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="deleteProducto(${p.id})">🗑</button></div></td></tr>`).join("");
+  document.getElementById("tbody-adm-productos").innerHTML=PRODUCTS.map(p=>`<tr><td><span class="badge badge-crimson">${p.linea}</span></td><td>${escHtml(p.marca||"—")}</td><td><strong>${escHtml(p.nombre)}</strong></td><td class="mono">${p.codigo}</td><td>${escHtml(p.presentacion||"—")}</td><td>${escHtml(p.unidad||"—")}</td><td class="mono" style="font-weight:600">$${fmt(p.precio)}</td><td><div class="flex"><button class="btn btn-ghost btn-sm" onclick="openProductoModal(${p.id})">✏</button><button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="deleteProducto(${p.id})">🗑</button></div></td></tr>`).join("");
 }
 function openProductoModal(id=null){
   editingProductoId=id;
@@ -1344,18 +1345,20 @@ function openProductoModal(id=null){
     document.getElementById("prod-linea").value=p.linea; document.getElementById("prod-marca").value=p.marca||"";
     document.getElementById("prod-nombre").value=p.nombre; document.getElementById("prod-codigo").value=p.codigo;
     document.getElementById("prod-presentacion").value=p.presentacion||""; document.getElementById("prod-precio").value=p.precio;
+    document.getElementById("prod-unidad").value=p.unidad||"";
   } else {
     document.getElementById("modal-prod-title").textContent="Nuevo producto";
     document.getElementById("prod-linea").selectedIndex=0; document.getElementById("prod-marca").value="";
     document.getElementById("prod-nombre").value=""; document.getElementById("prod-codigo").value="";
     document.getElementById("prod-presentacion").value=""; document.getElementById("prod-precio").value="";
+    document.getElementById("prod-unidad").value="";
   }
   document.getElementById("modal-producto").classList.add("open");
 }
 async function saveProducto(){
   const nombre=document.getElementById("prod-nombre").value.trim(), codigo=document.getElementById("prod-codigo").value.trim(), precio=Number(document.getElementById("prod-precio").value)||0;
   if(!nombre||!codigo||precio<=0){ toast("Campos inválidos.","error"); return; }
-  const pObj={ linea:document.getElementById("prod-linea").value, marca:document.getElementById("prod-marca").value.trim(), nombre, codigo, presentacion:document.getElementById("prod-presentacion").value.trim(), precio };
+  const pObj={ linea:document.getElementById("prod-linea").value, marca:document.getElementById("prod-marca").value.trim(), nombre, codigo, presentacion:document.getElementById("prod-presentacion").value.trim(), precio, unidad:document.getElementById("prod-unidad").value.trim() };
   setLoading("Guardando producto...");
   try { await dbSaveProduct(pObj, editingProductoId); toast("Producto guardado","success"); closeModal('modal-producto'); await loadAllData(); renderAdmProductos(); }
   catch(e){ toast("Error: "+e.message,"error"); }
@@ -1371,7 +1374,7 @@ async function deleteProducto(id){
 function openImportModal(type){
   importType=type; importParsedData=[]; importErrors=[];
   document.getElementById("import-title").textContent="Importar "+type+" desde Excel";
-  document.getElementById("import-subtitle").textContent=type==="clientes"?"Campos: nombre, codigo, canal, departamento, direccion, distribuidor, dto_fijo":type==="usuarios"?"Campos: nombre, apellido, email, password, rol, status":"Campos: linea, marca, nombre, codigo, presentacion, precio";
+  document.getElementById("import-subtitle").textContent=type==="clientes"?"Campos: nombre, codigo, canal, departamento, direccion, distribuidor, dto_fijo":type==="usuarios"?"Campos: nombre, apellido, email, password, rol, status":"Campos: linea, marca, nombre, codigo, presentacion, precio, unidad";
   document.getElementById("import-feedback").innerHTML="";
   document.getElementById("import-preview").style.display="none";
   document.getElementById("import-summary").style.display="none";
@@ -1408,13 +1411,13 @@ async function confirmImport(){
     if(DEMO_MODE){
       for(let row of importParsedData){
         if(importType==="clientes"){ if(!row.nombre||!row.codigo){skipped++;continue;} await dbSaveClient({nombre:row.nombre,codigo:String(row.codigo),canal:row.canal||"Almacén",departamento:row.departamento||"Montevideo",direccion:row.direccion||"",distribuidor:row.distribuidor||"",dto:Number(row.dto_fijo)||0,supervisorId:null}); count++; }
-        else if(importType==="productos"){ if(!row.nombre||!row.codigo){skipped++;continue;} await dbSaveProduct({linea:row.linea||"FORTYLEX",marca:row.marca||"",nombre:row.nombre,codigo:String(row.codigo),presentacion:row.presentacion||"",precio:Number(row.precio)||0}); count++; }
+        else if(importType==="productos"){ if(!row.nombre||!row.codigo){skipped++;continue;} await dbSaveProduct({linea:row.linea||"FORTYLEX",marca:row.marca||"",nombre:row.nombre,codigo:String(row.codigo),presentacion:row.presentacion||"",precio:Number(row.precio)||0,unidad:row.unidad||""}); count++; }
         else if(importType==="usuarios"){ if(!row.email||!row.nombre){skipped++;continue;} await dbSaveUser({nombre:row.nombre,apellido:row.apellido||"",email:row.email,password:String(row.password||"123456"),role:row.rol||"vendedor",status:row.status||"active",firstLogin:false}); count++; }
       }
     } else {
       let rows=[], table="";
       if(importType==="clientes"){ table="clients"; rows=importParsedData.filter(r=>r.nombre&&r.codigo).map(r=>({nombre:r.nombre,codigo:String(r.codigo),canal:r.canal||"Almacén",departamento:r.departamento||"Montevideo",direccion:r.direccion||"",supervisor_id:null,distribuidor:r.distribuidor||"",dto:Number(r.dto_fijo)||0})); }
-      else if(importType==="productos"){ table="products"; rows=importParsedData.filter(r=>r.nombre&&r.codigo).map(r=>({linea:r.linea||"FORTYLEX",marca:r.marca||"",nombre:r.nombre,codigo:String(r.codigo),presentacion:r.presentacion||"",precio:Number(r.precio)||0})); }
+      else if(importType==="productos"){ table="products"; rows=importParsedData.filter(r=>r.nombre&&r.codigo).map(r=>({linea:r.linea||"FORTYLEX",marca:r.marca||"",nombre:r.nombre,codigo:String(r.codigo),presentacion:r.presentacion||"",precio:Number(r.precio)||0,unidad:r.unidad||""})); }
       else if(importType==="usuarios"){ table="users"; rows=importParsedData.filter(r=>r.email&&r.nombre).map(r=>({nombre:r.nombre,apellido:r.apellido||"",email:r.email,password:String(r.password||"123456"),role:r.rol||"vendedor",status:r.status||"active",first_login:false})); }
       skipped=importParsedData.length-rows.length;
       for(let i=0;i<rows.length;i+=CHUNK){
@@ -1431,7 +1434,7 @@ async function confirmImport(){
 function downloadTemplate(){
   let cols=[];
   if(importType==="clientes") cols=["nombre","codigo","canal","departamento","direccion","distribuidor","dto_fijo"];
-  if(importType==="productos") cols=["linea","marca","nombre","codigo","presentacion","precio"];
+  if(importType==="productos") cols=["linea","marca","nombre","codigo","presentacion","precio","unidad"];
   if(importType==="usuarios") cols=["nombre","apellido","email","password","rol","status"];
   const ws=XLSX.utils.json_to_sheet([cols.reduce((a,c)=>({...a,[c]:""}),{})],{header:cols});
   const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Plantilla");

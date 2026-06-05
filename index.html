@@ -389,10 +389,11 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
   <div class="modal" style="width:1320px">
     <div class="flex-between mb-4"><div class="modal-title" id="modal-pedido-title">Nuevo pedido</div><button class="btn btn-ghost btn-sm" onclick="closeModal('modal-pedido')">✕</button></div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">
+      <div class="form-group" style="margin:0"><label class="form-label">Distribuidor</label><div class="ss-wrap" id="ss-p-distribuidor"></div></div>
       <div class="form-group" style="margin:0"><label class="form-label">Cliente <span class="required-star">*</span></label><div class="ss-wrap" id="ss-p-cliente"></div></div>
-      <div class="form-group" style="margin:0"><label class="form-label">Distribuidor</label><input type="text" id="p-distribuidor" placeholder="Se completa con el cliente"></div>
       <div class="form-group" style="margin:0"><label class="form-label">Departamento</label><input type="text" id="p-depto" list="deptos-datalist" placeholder="Departamento" autocomplete="off"><datalist id="deptos-datalist"></datalist></div>
     </div>
+    <input type="hidden" id="p-distribuidor">
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr 2fr;gap:10px;margin-bottom:16px">
       <div class="form-group" style="margin:0"><label class="form-label">Fecha</label><input type="date" id="p-fecha"></div>
       <div class="form-group" style="margin:0"><label class="form-label">Dto. fijo %</label><input type="number" id="p-dto-fijo" value="0" min="0" max="100" oninput="onDtoFijoChange()"></div>
@@ -1065,15 +1066,27 @@ function descargarPedidoPDF(id){
   doc.save("Pedido_"+p.id+".pdf");
 }
 function buildDistribuidorOptions(){ return [...new Set(CLIENTS.map(c=>c.distribuidor).filter(Boolean))].map(d=>({value:d,label:d})); }
+function clientesParaDistribuidor(distrib){
+  const list = distrib ? CLIENTS.filter(c=>(c.distribuidor||"")===distrib) : CLIENTS;
+  return list.map(c=>({value:c.id,label:c.nombre+" ("+c.codigo+")"}));
+}
+function onDistribuidorChange(distrib){
+  document.getElementById("p-distribuidor").value = distrib||"";
+  const opts = clientesParaDistribuidor(distrib);
+  const firstVal = opts[0] ? opts[0].value : "";
+  ssCreate("ss-p-cliente",opts,firstVal,v=>onClienteChange(v),"Seleccionar cliente...",false);
+  if(firstVal){ onClienteChange(firstVal); }
+  else { document.getElementById("p-dto-fijo").value=0; document.getElementById("p-depto").value=""; renderLineas(); }
+}
 function openNuevoPedido(){
   editingPedidoId=null; lineas=[];
   document.getElementById("modal-pedido-title").textContent="Nuevo pedido";
-  const cliOpts=CLIENTS.map(c=>({value:c.id,label:c.nombre+" ("+c.codigo+")"}));
-  ssCreate("ss-p-cliente",cliOpts,CLIENTS[0]?.id||"",v=>onClienteChange(v),"Seleccionar cliente...",false);
-  document.getElementById("p-distribuidor").value=""; document.getElementById("p-razon-social").value="";
+  const distOpts=[{value:"",label:"Todos los distribuidores"},...buildDistribuidorOptions()];
+  ssCreate("ss-p-distribuidor",distOpts,"",v=>onDistribuidorChange(v),"Distribuidor...",false);
+  document.getElementById("p-razon-social").value="";
   document.getElementById("p-fecha").max=todayISO(); document.getElementById("p-fecha").value=todayISO();
-  if(CLIENTS[0]) onClienteChange(CLIENTS[0].id);
-  document.getElementById("p-dto-extra").value=0; renderLineas();
+  document.getElementById("p-dto-extra").value=0;
+  onDistribuidorChange("");
   document.getElementById("modal-pedido").classList.add("open"); initColResizers();
 }
 function onClienteChange(val){
@@ -1089,9 +1102,14 @@ function editPedido(id){
   const p=PEDIDOS.find(x=>x.id===id); if(!p)return;
   editingPedidoId=id; lineas=p.lineas.map(l=>({...l}));
   document.getElementById("modal-pedido-title").textContent="Editar pedido "+id;
-  const cliOpts=CLIENTS.map(c=>({value:c.id,label:c.nombre+" ("+c.codigo+")"}));
-  ssCreate("ss-p-cliente",cliOpts,p.clienteId,v=>onClienteChange(v),"Seleccionar cliente...",false);
-  document.getElementById("p-distribuidor").value=p.distribuidor||""; document.getElementById("p-razon-social").value=p.razonSocial||"";
+  const distOpts=[{value:"",label:"Todos los distribuidores"},...buildDistribuidorOptions()];
+  if(p.distribuidor && !distOpts.some(o=>o.value===p.distribuidor)) distOpts.push({value:p.distribuidor,label:p.distribuidor});
+  ssCreate("ss-p-distribuidor",distOpts,p.distribuidor||"",v=>onDistribuidorChange(v),"Distribuidor...",false);
+  const opts=clientesParaDistribuidor(p.distribuidor||"");
+  if(p.clienteId && !opts.some(o=>String(o.value)===String(p.clienteId))){ const c=CLIENTS.find(x=>x.id===p.clienteId); if(c) opts.unshift({value:c.id,label:c.nombre+" ("+c.codigo+")"}); }
+  ssCreate("ss-p-cliente",opts,p.clienteId,v=>onClienteChange(v),"Seleccionar cliente...",false);
+  document.getElementById("p-distribuidor").value=p.distribuidor||"";
+  document.getElementById("p-razon-social").value=p.razonSocial||"";
   document.getElementById("p-fecha").max=todayISO(); document.getElementById("p-fecha").value=p.fechaISO||todayISO();
   document.getElementById("p-dto-fijo").value=p.dtoFijo||0;
   document.getElementById("p-dto-extra").value=p.dtoExtra||0;

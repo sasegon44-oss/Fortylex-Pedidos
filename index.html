@@ -260,7 +260,7 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
       <div class="sb-section-label">Principal</div>
       <button class="nav-item" onclick="nav('dashboard')"><span class="ni-icon">📊</span><span class="ni-label">Dashboard</span></button>
       <button class="nav-item" onclick="nav('pedidos')"><span class="ni-icon">📦</span><span class="ni-label">Pedidos</span></button>
-      <button class="nav-item admin-sup-only" onclick="nav('bandeja')"><span class="ni-icon">📥</span><span class="ni-label">Bandeja</span><span class="ni-badge" id="sb-bandeja-count">0</span></button>
+      <button class="nav-item admin-only" onclick="nav('bandeja')"><span class="ni-icon">📥</span><span class="ni-label">Bandeja</span><span class="ni-badge" id="sb-bandeja-count">0</span></button>
       <div class="sb-section-label">Comercial</div>
       <button class="nav-item" onclick="nav('clientes')"><span class="ni-icon">👥</span><span class="ni-label">Clientes</span></button>
       <button class="nav-item admin-only" onclick="nav('supervisores')"><span class="ni-icon">👤</span><span class="ni-label">Supervisores</span></button>
@@ -284,7 +284,7 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
       <div class="topbar-right">
         <span class="demo-pill" id="demo-pill" style="display:none">⚠ MODO DEMO</span>
         <div class="search-box"><span style="color:var(--text3)">🔍</span><input type="text" placeholder="Buscar pedidos, clientes..." id="global-search" oninput="globalSearch(this.value)"></div>
-        <div class="notif-btn admin-sup-topbar" onclick="nav('bandeja')" title="Pedidos pendientes">🔔<span class="notif-badge" id="notif-count">0</span></div>
+        <div class="notif-btn admin-only" onclick="nav('bandeja')" title="Pedidos pendientes">🔔<span class="notif-badge" id="notif-count">0</span></div>
         <button class="profile-btn" onclick="nav('perfil')">👤 Mi perfil</button>
       </div>
     </div>
@@ -518,6 +518,9 @@ const EMAILJS_PUBLIC_KEY  = 'TU_PUBLIC_KEY';
 const EMAILJS_SERVICE_ID  = 'TU_SERVICE_ID';
 const EMAILJS_TEMPLATE_ID = 'TU_TEMPLATE_ID';
 function EMAILJS_READY(){ return typeof emailjs!=='undefined' && EMAILJS_PUBLIC_KEY!=='TU_PUBLIC_KEY' && EMAILJS_SERVICE_ID!=='TU_SERVICE_ID' && EMAILJS_TEMPLATE_ID!=='TU_TEMPLATE_ID'; }
+const EMAILJS_ORDER_TEMPLATE_ID = 'TU_ORDER_TEMPLATE_ID';
+const ORDER_EMAIL_DEFAULT = '';
+function EMAILJS_ORDER_READY(){ return typeof emailjs!=='undefined' && EMAILJS_PUBLIC_KEY!=='TU_PUBLIC_KEY' && EMAILJS_SERVICE_ID!=='TU_SERVICE_ID' && EMAILJS_ORDER_TEMPLATE_ID!=='TU_ORDER_TEMPLATE_ID'; }
 try { if(typeof emailjs!=='undefined' && EMAILJS_PUBLIC_KEY!=='TU_PUBLIC_KEY') emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY }); } catch(e){ console.warn('EmailJS init:', e); }
 function genTempPassword(){ const chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'; let p=''; for(let i=0;i<10;i++) p+=chars[Math.floor(Math.random()*chars.length)]; return p; }
 async function sendInviteEmail(toEmail, toName, password){
@@ -897,7 +900,8 @@ function toggleSidebar(){document.getElementById("sidebar").classList.toggle("co
 
 const TITLES={dashboard:"Dashboard",pedidos:"Pedidos",bandeja:"Bandeja de corroboración",clientes:"Clientes",supervisores:"Supervisores",metricas:"Métricas",metas:"Metas",alertas:"Alertas – Top 5 diferencias",admin:"Administración",perfil:"Mi perfil"};
 function nav(key){
-  if((key==="bandeja"||key==="metas"||key==="alertas")&&isVendedor())key="pedidos";
+  if((key==="metas"||key==="alertas")&&isVendedor())key="pedidos";
+  if(key==="bandeja"&&!isAdmin())key="pedidos";
   if((key==="supervisores"||key==="admin")&&!isAdmin())key="pedidos";
   if(key==="metricas"&&isVendedor())key="pedidos";
   document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
@@ -1037,7 +1041,8 @@ function verPedido(id){
   const totales=`<div style="display:flex;justify-content:flex-end;gap:24px;margin-top:14px;align-items:baseline">${p.dtoExtra?`<div style="font-size:12px;color:var(--text2)">Dto. extra: <strong>${p.dtoExtra}%</strong></div>`:""}<div style="font-size:13px;color:var(--text2)">Total general: <strong style="font-size:20px;color:var(--navy)">$${fmt(p.total)}</strong></div></div>`;
   const fact=p.montofacturado!=null?`<div style="font-size:12px;color:var(--text2);margin-top:6px;text-align:right">Monto facturado: <strong>$${fmt(p.montofacturado)}</strong></div>`:"";
   const notas=p.notas?`<div style="margin-top:14px;padding:10px;background:rgba(0,0,0,.03);border-radius:8px;font-size:12px"><span style="color:var(--text2)">Notas:</span> ${escHtml(p.notas)}</div>`:"";
-  document.getElementById("ver-pedido-body").innerHTML=style+infoHtml+tabla+totales+fact+notas;
+  const enviar=`<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span style="font-size:12px;color:var(--text2);font-weight:600">Enviar por email a:</span><input type="email" id="ver-email-to" placeholder="destinatario@email.com" value="${ORDER_EMAIL_DEFAULT||''}" style="flex:1;min-width:200px;padding:7px 10px;border:1px solid var(--border2);border-radius:8px;font-family:inherit"><button class="btn btn-primary btn-sm" id="btn-enviar-email" onclick="enviarPedidoEmail(verPedidoId)">✉ Enviar pedido</button></div>`;
+  document.getElementById("ver-pedido-body").innerHTML=style+infoHtml+tabla+totales+fact+notas+enviar;
   document.getElementById("modal-ver-pedido").classList.add("open");
 }
 function descargarPedidoPDF(id){
@@ -1064,6 +1069,27 @@ function descargarPedidoPDF(id){
   if(p.montofacturado!=null){ doc.setFontSize(9); doc.setTextColor(120); doc.text("Facturado: $"+fmt(p.montofacturado),R,fy+14,{align:"right"}); }
   if(p.notas){ doc.setFontSize(9); doc.setTextColor(120); doc.text("Notas: "+p.notas,M,fy,{maxWidth:R-M-160}); }
   doc.save("Pedido_"+p.id+".pdf");
+}
+async function enviarPedidoEmail(id){
+  const p=PEDIDOS.find(x=>x.id===id); if(!p)return;
+  const to=(document.getElementById("ver-email-to")?.value||"").trim();
+  if(!to){ alert("Ingresá el email del destinatario."); return; }
+  if(!EMAILJS_ORDER_READY()){ alert("Todavía falta configurar el envío por email (EmailJS). Cuando esté configurado, este botón manda el pedido."); return; }
+  const btn=document.getElementById("btn-enviar-email"); if(btn){btn.disabled=true;btn.textContent="Enviando…";}
+  const lineasTxt=(p.lineas||[]).map((l,i)=>`${i+1}. ${l.nombre||l.linea||'-'} - ${l.cantidad||0} ${l.unidad||''} x $${fmt(l.precio||0)} = $${fmt(lineaTotalCalc(l,p.dtoExtra))}${l.obs?` (Obs: ${l.obs})`:''}`).join("\n");
+  const message=`PEDIDO ${p.id}\nFecha: ${p.fecha}\nVendedor: ${p.userName||'-'}\nCliente: ${p.clienteNombre||'-'}\nDistribuidor: ${p.distribuidor||'-'}\nDepartamento: ${p.departamento||'-'}\nRazon social: ${p.razonSocial||'-'}\n\nLINEAS:\n${lineasTxt}\n\nTOTAL: $${fmt(p.total)}${p.notas?`\n\nNotas: ${p.notas}`:''}`;
+  try{
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_ORDER_TEMPLATE_ID, {
+      to_email: to, email: to, to_name: "Equipo Fortylex",
+      subject: `Pedido ${p.id} - ${p.clienteNombre||''}`,
+      order_id: String(p.id), cliente: p.clienteNombre||'', total: "$"+fmt(p.total), message: message
+    });
+    toast("✓ Pedido enviado por email a "+to, "success");
+  }catch(e){
+    alert("No se pudo enviar el email: "+(e?.text||e?.message||e));
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent="✉ Enviar pedido";}
+  }
 }
 function buildDistribuidorOptions(){ return [...new Set(CLIENTS.map(c=>c.distribuidor).filter(Boolean))].map(d=>({value:d,label:d})); }
 function clientesParaDistribuidor(distrib){
@@ -1183,10 +1209,11 @@ async function deletePedido(id){
 function renderBandeja(){
   const pending=PEDIDOS.filter(p=>p.estado==="Pendiente de corroboración").sort((a,b)=>String(b.id).localeCompare(String(a.id)));
   const b=document.getElementById("bandeja-body"); if(!b)return;
-  b.innerHTML=pending.map(p=>`<div class="inbox-block"><div class="inbox-sup-header" onclick="this.nextElementSibling.classList.toggle('open')"><div class="inbox-sup-avatar">${userInitials({nombre:p.userName})}</div><div style="flex:1"><div class="flex-between"><span style="font-weight:700;font-size:13.5px;color:var(--navy)">${escHtml(p.clienteNombre)}</span><span style="font-weight:800;font-size:14px;color:var(--accent)">$${fmt(p.total)}</span></div><div class="flex mt-2" style="gap:12px;color:var(--text2);font-size:11.5px"><span>ID: <strong>${p.id}</strong></span>&bull;<span>Vendedor: ${p.userName}</span>&bull;<span>Fecha: ${p.fecha}</span>&bull;<span>Depto: ${p.departamento}</span></div></div></div><div class="inbox-body" style="padding:16px;border-top:1px solid var(--border)"><div style="background:#fff;border-radius:6px;border:1px solid var(--border);overflow:hidden;margin-bottom:14px"><table><thead><tr><th>Producto</th><th>Código</th><th>Precio s/IVA</th><th>Descuentos</th><th>Cant.</th><th>Total</th></tr></thead><tbody>${p.lineas.map(l=>`<tr><td><strong>[${l.linea}]</strong> ${escHtml(l.nombre)}</td><td class="mono">${l.codigo}</td><td>$${fmt(l.precio)}</td><td>Fijo:${l.dtoFijo}% / Esp:${l.dtoEsp}%</td><td style="text-align:center">${l.cantidad}</td><td style="text-align:right;font-weight:600;color:var(--green)">$${fmt(l.precio*l.cantidad*(1-l.dtoFijo/100)*(1-l.dtoEsp/100)*(1-(p.dtoExtra||0)/100))}</td></tr>`).join("")}</tbody></table></div><div class="flex" style="justify-content:flex-end;gap:8px"><button class="btn btn-ghost btn-sm" onclick="editPedido('${p.id}')">✏ Editar pedido</button><button class="btn btn-primary btn-sm" onclick="openFacturacion('${p.id}')">✅ Validar y Facturar</button></div></div></div>`).join("")||`<div style="text-align:center;padding:44px;background:#fff;border-radius:12px;border:1px solid var(--border);color:var(--text2)">🎉 ¡Excelente! No hay pedidos pendientes de corroboración.</div>`;
+  b.innerHTML=pending.map(p=>`<div class="inbox-block"><div class="inbox-sup-header" onclick="this.nextElementSibling.classList.toggle('open')"><div class="inbox-sup-avatar">${userInitials({nombre:p.userName})}</div><div style="flex:1"><div class="flex-between"><span style="font-weight:700;font-size:13.5px;color:var(--navy)">${escHtml(p.clienteNombre)}</span><span style="font-weight:800;font-size:14px;color:var(--accent)">$${fmt(p.total)}</span></div><div class="flex mt-2" style="gap:12px;color:var(--text2);font-size:11.5px"><span>ID: <strong>${p.id}</strong></span>&bull;<span>Vendedor: ${p.userName}</span>&bull;<span>Fecha: ${p.fecha}</span>&bull;<span>Depto: ${p.departamento}</span></div></div></div><div class="inbox-body" style="padding:16px;border-top:1px solid var(--border)"><div style="background:#fff;border-radius:6px;border:1px solid var(--border);overflow:hidden;margin-bottom:14px"><table><thead><tr><th>Producto</th><th>Código</th><th>Precio s/IVA</th><th>Descuentos</th><th>Cant.</th><th>Total</th></tr></thead><tbody>${p.lineas.map(l=>`<tr><td><strong>[${l.linea}]</strong> ${escHtml(l.nombre)}</td><td class="mono">${l.codigo}</td><td>$${fmt(l.precio)}</td><td>Fijo:${l.dtoFijo}% / Esp:${l.dtoEsp}%</td><td style="text-align:center">${l.cantidad}</td><td style="text-align:right;font-weight:600;color:var(--green)">$${fmt(l.precio*l.cantidad*(1-l.dtoFijo/100)*(1-l.dtoEsp/100)*(1-(p.dtoExtra||0)/100))}</td></tr>`).join("")}</tbody></table></div><div class="flex" style="justify-content:flex-end;gap:8px"><button class="btn btn-ghost btn-sm" onclick="editPedido('${p.id}')">✏ Editar pedido</button>${isAdmin()?`<button class="btn btn-primary btn-sm" onclick="openFacturacion('${p.id}')">✅ Validar y Facturar</button>`:""}</div></div></div>`).join("")||`<div style="text-align:center;padding:44px;background:#fff;border-radius:12px;border:1px solid var(--border);color:var(--text2)">🎉 ¡Excelente! No hay pedidos pendientes de corroboración.</div>`;
 }
 
 function openFacturacion(id){
+  if(!isAdmin()){ toast("Solo un administrador puede validar y facturar pedidos.","info"); return; }
   const p=PEDIDOS.find(x=>x.id===id); if(!p)return; facturandoId=id;
   document.getElementById("fact-pedido-info").innerHTML=`<strong>Pedido:</strong> ${p.id}<br><strong>Cliente:</strong> ${escHtml(p.clienteNombre)}<br><strong>Monto Solicitado:</strong> $${fmt(p.total)}`;
   document.getElementById("fact-monto").value=p.total.toFixed(2);
@@ -1205,6 +1232,7 @@ function updateFactDiff(){
   else { el.className="badge badge-red"; el.style.width="100%"; el.textContent=`⚠ Facturado de más: $${fmt(Math.abs(diff))} (${Math.abs(pct)}% superior).`; }
 }
 async function saveFacturacion(){
+  if(!isAdmin()){ toast("Solo un administrador puede validar pedidos.","error"); return; }
   const est=document.getElementById("fact-estado").value;
   const monto=Number(document.getElementById("fact-monto").value)||0;
   const notas=document.getElementById("fact-notas").value;

@@ -9,6 +9,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
@@ -406,6 +408,19 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
       <button class="btn btn-success btn-sm" onclick="addLinea()">+ Agregar línea</button>
       <div class="flex" style="gap:16px"><div style="text-align:right"><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em">Total s/IVA</div><div style="font-size:26px;font-weight:800;color:var(--navy)" id="p-total">$0,00</div></div><button class="btn btn-primary" id="btn-guardar-pedido" onclick="savePedido()">💾 Guardar pedido</button></div>
     </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-ver-pedido">
+  <div class="modal" style="width:760px">
+    <div class="flex-between mb-4">
+      <div class="modal-title" id="modal-ver-title">Pedido</div>
+      <div class="flex" style="gap:8px">
+        <button class="btn btn-primary btn-sm" id="btn-ver-pdf" onclick="descargarPedidoPDF(verPedidoId)">⬇ Descargar PDF</button>
+        <button class="btn btn-ghost btn-sm" onclick="closeModal('modal-ver-pedido')">✕</button>
+      </div>
+    </div>
+    <div id="ver-pedido-body"></div>
   </div>
 </div>
 
@@ -901,7 +916,7 @@ function nav(key){
   if(key==="perfil")renderPerfil();
   updateNotif();
 }
-function getVisiblePedidos(){return isAdmin()||isSup()?PEDIDOS:PEDIDOS.filter(p=>p.userId===currentUser.id);}
+function getVisiblePedidos(){return isAdmin()?PEDIDOS:PEDIDOS.filter(p=>p.userId===currentUser.id);}
 function updateNotif(){
   const n=PEDIDOS.filter(p=>p.estado==="Pendiente de corroboración").length;
   document.getElementById("notif-count").textContent=n;
@@ -986,11 +1001,64 @@ function renderPedidos(){
     const diffHtml=diff!=null?`<span class="${diff>0?"diff-pos":diff<0?"diff-neg":"diff-ok"}">$${fmt(Math.abs(diff))}${diff>0?" ▲":diff<0?" ▼":""}</span>`:"-";
     const factHtml=p.montofacturado!=null?`$${fmt(p.montofacturado)}`:"-";
     const adminAct=isAdmin()?`<button class="btn btn-ghost btn-sm" onclick="openFacturacion('${p.id}')" title="Validar">✅</button>`:"";
+    const verAct=`<button class="btn btn-ghost btn-sm" onclick="verPedido('${p.id}')" title="Ver pedido">👁</button>`;
     const canEdit=isAdmin()||isSup()||(p.userId===currentUser.id);
     const editAct=canEdit?`<button class="btn btn-ghost btn-sm" onclick="editPedido('${p.id}')">✏️</button>`:"";
     const delAct=(isAdmin()||(p.userId===currentUser.id&&p.estado==="Pendiente de corroboración"))?`<button class="btn btn-ghost btn-sm" onclick="deletePedido('${p.id}')">🗑</button>`:"";
-    return`<tr class="${i%2?"tr-alt":""}"><td><span class="mono" style="font-weight:700;color:var(--accent)">${p.id}</span></td><td>${p.fecha}</td><td>${p.userName}</td><td style="font-weight:600">${escHtml(p.clienteNombre)}</td><td style="color:var(--text2);font-size:12px">${escHtml(p.distribuidor||"-")}</td><td><span class="badge badge-blue">${p.departamento||"-"}</span></td><td style="max-width:120px">${pedidoLineasResumen(p)}</td><td style="text-align:center">${p.lineas?.length||0}</td><td style="font-weight:700;text-align:right">$${fmt(p.total)}</td><td style="text-align:right">${factHtml}</td><td style="text-align:right">${diffHtml}</td><td>${estadoBadge(p.estado)}</td><td><div class="flex">${editAct}${adminAct}${delAct}</div></td></tr>`;
+    return`<tr class="${i%2?"tr-alt":""}"><td><span class="mono" style="font-weight:700;color:var(--accent)">${p.id}</span></td><td>${p.fecha}</td><td>${p.userName}</td><td style="font-weight:600">${escHtml(p.clienteNombre)}</td><td style="color:var(--text2);font-size:12px">${escHtml(p.distribuidor||"-")}</td><td><span class="badge badge-blue">${p.departamento||"-"}</span></td><td style="max-width:120px">${pedidoLineasResumen(p)}</td><td style="text-align:center">${p.lineas?.length||0}</td><td style="font-weight:700;text-align:right">$${fmt(p.total)}</td><td style="text-align:right">${factHtml}</td><td style="text-align:right">${diffHtml}</td><td>${estadoBadge(p.estado)}</td><td><div class="flex">${verAct}${editAct}${adminAct}${delAct}</div></td></tr>`;
   }).join("")||`<tr><td colspan="13" style="text-align:center;padding:36px;color:var(--text2)">No hay pedidos que coincidan.</td></tr>`;
+}
+let verPedidoId=null;
+function lineaTotalCalc(l,dtoExtra){ const sub=(Number(l.precio)||0)*(Number(l.cantidad)||0); return sub*(1-(Number(l.dtoFijo)||0)/100)*(1-(Number(l.dtoEsp)||0)/100)*(1-(Number(dtoExtra)||0)/100); }
+function verPedido(id){
+  const p=PEDIDOS.find(x=>x.id===id); if(!p)return;
+  verPedidoId=id;
+  document.getElementById("modal-ver-title").innerHTML=`Pedido <span class="mono" style="color:var(--accent)">${p.id}</span> &nbsp; ${estadoBadge(p.estado)}`;
+  const info=[["Fecha",p.fecha],["Vendedor",escHtml(p.userName||"-")],["Cliente",escHtml(p.clienteNombre||"-")],["Distribuidor",escHtml(p.distribuidor||"-")],["Departamento",escHtml(p.departamento||"-")],["Razón social",escHtml(p.razonSocial||"-")]];
+  const infoHtml=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;margin-bottom:16px">`+info.map(r=>`<div style="font-size:13px"><span style="color:var(--text2)">${r[0]}:</span> <strong>${r[1]||"-"}</strong></div>`).join("")+`</div>`;
+  const rows=(p.lineas||[]).map((l,i)=>{
+    const dtos=(Number(l.dtoFijo||0)+Number(l.dtoEsp||0));
+    return `<tr>
+      <td style="color:var(--text3);font-weight:700">${i+1}</td>
+      <td><strong>${escHtml(l.nombre||l.linea||"-")}</strong>${l.codigo?` <span class="mono" style="color:var(--text3);font-size:11px">(${escHtml(l.codigo)})</span>`:""}</td>
+      <td>${escHtml(l.marca||"-")}</td>
+      <td>${escHtml(l.presentacion||"-")}</td>
+      <td style="text-align:center">${l.cantidad||0}${l.unidad?` ${escHtml(l.unidad)}`:""}</td>
+      <td style="text-align:right" class="mono">$${fmt(l.precio||0)}</td>
+      <td style="text-align:center">${dtos}%</td>
+      <td style="text-align:right;font-weight:700;color:var(--green)" class="mono">$${fmt(lineaTotalCalc(l,p.dtoExtra))}</td>
+    </tr>`;
+  }).join("")||`<tr><td colspan="8" style="text-align:center;padding:18px;color:var(--text3)">Sin líneas</td></tr>`;
+  const style=`<style>.ver-table{width:100%;border-collapse:collapse;font-size:12px}.ver-table th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text2);padding:7px 8px;background:var(--navy);color:#fff}.ver-table td{padding:6px 8px;border-bottom:1px solid var(--border,#efe6e6)}</style>`;
+  const tabla=`<table class="ver-table"><thead><tr><th>#</th><th>Producto</th><th>Marca</th><th>Present.</th><th style="text-align:center">Cant.</th><th style="text-align:right">Precio</th><th style="text-align:center">Dto</th><th style="text-align:right">Total</th></tr></thead><tbody>${rows}</tbody></table>`;
+  const totales=`<div style="display:flex;justify-content:flex-end;gap:24px;margin-top:14px;align-items:baseline">${p.dtoExtra?`<div style="font-size:12px;color:var(--text2)">Dto. extra: <strong>${p.dtoExtra}%</strong></div>`:""}<div style="font-size:13px;color:var(--text2)">Total general: <strong style="font-size:20px;color:var(--navy)">$${fmt(p.total)}</strong></div></div>`;
+  const fact=p.montofacturado!=null?`<div style="font-size:12px;color:var(--text2);margin-top:6px;text-align:right">Monto facturado: <strong>$${fmt(p.montofacturado)}</strong></div>`:"";
+  const notas=p.notas?`<div style="margin-top:14px;padding:10px;background:rgba(0,0,0,.03);border-radius:8px;font-size:12px"><span style="color:var(--text2)">Notas:</span> ${escHtml(p.notas)}</div>`:"";
+  document.getElementById("ver-pedido-body").innerHTML=style+infoHtml+tabla+totales+fact+notas;
+  document.getElementById("modal-ver-pedido").classList.add("open");
+}
+function descargarPedidoPDF(id){
+  const p=PEDIDOS.find(x=>x.id===id); if(!p)return;
+  if(!window.jspdf||!window.jspdf.jsPDF){ alert("No se pudo cargar el generador de PDF. Revisá tu conexión e intentá de nuevo."); return; }
+  const { jsPDF }=window.jspdf;
+  const doc=new jsPDF({unit:"pt",format:"a4"});
+  const M=40, R=555; let y=48;
+  doc.setFontSize(18); doc.setTextColor(140,20,20); doc.text("PedidosForty",M,y);
+  doc.setFontSize(9); doc.setTextColor(120); doc.text("Fortylex · Comercial",M,y+14);
+  doc.setFontSize(14); doc.setTextColor(20); doc.text("Pedido "+p.id,R,y,{align:"right"});
+  doc.setFontSize(9); doc.setTextColor(120); doc.text(String(p.fecha||""),R,y+14,{align:"right"});
+  y+=40;
+  doc.setFontSize(10);
+  const info=[["Cliente",p.clienteNombre||"-"],["Distribuidor",p.distribuidor||"-"],["Departamento",p.departamento||"-"],["Razón social",p.razonSocial||"-"],["Vendedor",p.userName||"-"],["Estado",p.estado||"-"]];
+  info.forEach((r,i)=>{ const yy=y+i*15; doc.setTextColor(120); doc.text(r[0]+":",M,yy); doc.setTextColor(20); doc.text(String(r[1]),M+95,yy); });
+  y+=info.length*15+12;
+  const body=(p.lineas||[]).map((l,i)=>[i+1,(l.nombre||l.linea||"-"),(l.marca||"-"),(l.presentacion||"-"),String(l.cantidad||0)+(l.unidad?(" "+l.unidad):""),"$"+fmt(l.precio||0),(Number(l.dtoFijo||0)+Number(l.dtoEsp||0))+"%","$"+fmt(lineaTotalCalc(l,p.dtoExtra))]);
+  doc.autoTable({ startY:y, head:[["#","Producto","Marca","Present.","Cant.","Precio","Dto","Total"]], body, styles:{fontSize:8,cellPadding:3}, headStyles:{fillColor:[26,10,10]}, columnStyles:{0:{cellWidth:22},5:{halign:"right"},7:{halign:"right"}} });
+  let fy=(doc.lastAutoTable?doc.lastAutoTable.finalY:y)+20;
+  doc.setFontSize(12); doc.setTextColor(20); doc.text("Total: $"+fmt(p.total),R,fy,{align:"right"});
+  if(p.montofacturado!=null){ doc.setFontSize(9); doc.setTextColor(120); doc.text("Facturado: $"+fmt(p.montofacturado),R,fy+14,{align:"right"}); }
+  if(p.notas){ doc.setFontSize(9); doc.setTextColor(120); doc.text("Notas: "+p.notas,M,fy,{maxWidth:R-M-160}); }
+  doc.save("Pedido_"+p.id+".pdf");
 }
 function buildDistribuidorOptions(){ return [...new Set(CLIENTS.map(c=>c.distribuidor).filter(Boolean))].map(d=>({value:d,label:d})); }
 function openNuevoPedido(){

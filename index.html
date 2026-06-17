@@ -826,7 +826,6 @@ async function doLogin(){
     let user=null, supaError=null;
     try { const {data,error}=await db.from("users").select("*").ilike("email",email).maybeSingle(); if(error) supaError=error; else if(data) user=data; }
     catch(e){ supaError=e; }
-    if(!user){ const demo=findDemoUser(email); if(demo){ user={...demo}; DEMO_MODE=true; } }
     if(!user){
       if(supaError){ console.error("Supabase login error:", supaError); errEl.textContent="No se pudo leer la tabla de usuarios en Supabase (probable RLS o tabla vacía). Abrí la consola (F12) para ver el detalle."; }
       else { errEl.textContent="No existe ningún usuario con ese correo."; }

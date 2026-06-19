@@ -479,7 +479,7 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
     <div class="flex-between mb-4"><div class="modal-title" id="modal-user-title">Nuevo usuario</div><button class="btn btn-ghost btn-sm" onclick="closeModal('modal-usuario')">✕</button></div>
     <div class="grid-2"><div class="form-group"><label class="form-label">Nombre <span class="required-star">*</span></label><input type="text" id="user-nombre"></div><div class="form-group"><label class="form-label">Apellido <span class="required-star">*</span></label><input type="text" id="user-apellido"></div></div>
     <div class="grid-2"><div class="form-group"><label class="form-label">Correo <span class="required-star">*</span></label><input type="email" id="user-email"></div><div class="form-group"><label class="form-label">Contraseña inicial</label><div class="flex" style="gap:6px"><input type="text" id="user-pass" placeholder="Se genera sola si la dejás vacía"><button type="button" class="btn btn-ghost btn-sm" title="Generar contraseña" onclick="document.getElementById('user-pass').value=genTempPassword()">🎲</button></div></div></div>
-    <div class="grid-2"><div class="form-group"><label class="form-label">Rol</label><select id="user-rol"><option value="supervisor">Supervisor</option><option value="vendedor">Vendedor</option></select></div><div class="form-group"><label class="form-label">Estado</label><select id="user-status"><option value="active">Activo</option><option value="inactive">Inactivo</option></select></div></div>
+    <div class="grid-2"><div class="form-group"><label class="form-label">Rol</label><select id="user-rol"><option value="administrador">Administrador</option><option value="supervisor">Supervisor</option><option value="vendedor">Vendedor</option></select></div><div class="form-group"><label class="form-label">Estado</label><select id="user-status"><option value="active">Activo</option><option value="inactive">Inactivo</option></select></div></div>
     <div class="form-group"><label class="form-label">Reporta a (supervisor)</label><div class="ss-wrap" id="ss-user-sup"></div></div>
     <div class="form-group" id="invite-row"><label class="flex" style="gap:8px;cursor:pointer;font-size:12.5px;color:var(--text2)"><input type="checkbox" id="user-send-invite" checked style="width:auto"> Enviar invitación por email con las credenciales</label></div>
     <div class="flex" style="justify-content:flex-end;gap:8px"><button class="btn btn-ghost" onclick="closeModal('modal-usuario')">Cancelar</button><button class="btn btn-primary" id="btn-save-user" onclick="saveUser()">Guardar usuario</button></div>
@@ -1408,7 +1408,7 @@ function openUserModal(id=null){
     document.getElementById("user-nombre").value=""; document.getElementById("user-apellido").value="";
     document.getElementById("user-email").value=""; document.getElementById("user-pass").value="";
     document.getElementById("user-pass").placeholder="Se genera sola si la dejás vacía";
-    document.getElementById("user-rol").selectedIndex=0; document.getElementById("user-status").value="active";
+    document.getElementById("user-rol").value="vendedor"; document.getElementById("user-status").value="active";
     if(inviteRow) inviteRow.style.display="block"; document.getElementById("user-send-invite").checked=true;
     ssCreate("ss-user-sup",sups,"",()=>{},"Reporta a...",true);
   }

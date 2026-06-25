@@ -355,6 +355,7 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
           <select id="dash-filter-vend" onchange="renderDashboard()" style="width:180px"><option value="">Todos los vendedores</option></select>
         </div>
         <div class="kpi-grid" id="dash-kpis"></div>
+        <div class="card mb-4" id="dash-inactivos-card"><div class="card-header"><span class="card-title">😴 Vendedores sin pedidos en los últimos 5 días</span><span id="dash-inactivos-count" class="badge badge-yellow">0</span></div><div class="card-body" id="dash-inactivos-body"></div></div>
         <div class="grid-2 mb-4">
           <div class="card"><div class="card-header"><span class="card-title">Ventas por supervisor</span></div><div class="card-body"><div class="chart-wrap"><canvas id="chart-supervisores"></canvas></div></div></div>
           <div class="card"><div class="card-header"><span class="card-title">Top 5 clientes</span></div><div class="card-body" id="top-clientes-body"></div></div>
@@ -1087,7 +1088,12 @@ function renderDashboard(){
   const supSel=document.getElementById("dash-filter-sup");
   if(supSel&&supSel.options.length<=1){USERS.filter(u=>u.role==="supervisor").forEach(u=>{const o=document.createElement("option");o.value=u.id;o.textContent=userName(u);supSel.appendChild(o);});}
   const vendSel=document.getElementById("dash-filter-vend");
-  if(vendSel&&vendSel.options.length<=1){USERS.filter(u=>u.role==="vendedor").forEach(u=>{const o=document.createElement("option");o.value=u.id;o.textContent=userName(u);vendSel.appendChild(o);});}
+  if(vendSel){
+    const prev=vendSel.value;
+    const vends=USERS.filter(u=>u.role==="vendedor").sort((a,b)=>userName(a).localeCompare(userName(b)));
+    vendSel.innerHTML=`<option value="">Todos los vendedores</option>`+vends.map(u=>`<option value="${u.id}">${escHtml(userName(u))} (${pedidosUltimosDias(u.id,7)})</option>`).join("");
+    vendSel.value=prev;
+  }
   if(filterDepto) all=all.filter(p=>p.departamento===filterDepto);
   if(filterSup){ const ids=teamUserIds(filterSup); all=all.filter(p=>ids.includes(p.userId)); }
   if(filterVend) all=all.filter(p=>p.userId===Number(filterVend));
@@ -1107,6 +1113,30 @@ function renderDashboard(){
     <div class="kpi-card"><div class="kpi-label">Ticket promedio</div><div class="kpi-value">${fmtK(ticket)}</div><div class="kpi-sub">Por pedido</div></div>
     <div class="kpi-card"><div class="kpi-label">Pedidos hoy</div><div class="kpi-value">${hoyCount}</div><div class="kpi-sub">${hoy}</div></div>`;
   renderTopClientes(all); renderChartSupervisores(all); renderChartLinea(all); renderChartDepto(all,"chart-depto"); renderDashAlertas();
+  renderVendedoresInactivos(filterSup);
+}
+// ── Actividad de vendedores ──
+function ultimosDiasISO(days){ const arr=[]; const base=new Date(); for(let i=0;i<days;i++){ const d=new Date(base); d.setDate(base.getDate()-i); arr.push(new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)); } return arr; }
+function pedidosUltimosDias(userId, days){ const set=new Set(ultimosDiasISO(days)); return PEDIDOS.filter(p=>p.userId===userId && set.has(p.fechaISO)).length; }
+function ultimoPedidoISO(userId){ const ds=PEDIDOS.filter(p=>p.userId===userId && p.fechaISO).map(p=>p.fechaISO).sort(); return ds.length?ds[ds.length-1]:null; }
+function diasDesdeISO(iso){ if(!iso) return null; const hoy=new Date(todayISO()+"T00:00:00"); const d=new Date(iso+"T00:00:00"); return Math.round((hoy-d)/86400000); }
+function renderVendedoresInactivos(filterSup){
+  const card=document.getElementById("dash-inactivos-card"); const body=document.getElementById("dash-inactivos-body"); const badge=document.getElementById("dash-inactivos-count");
+  if(!card||!body)return;
+  let vends=USERS.filter(u=>u.role==="vendedor");
+  if(filterSup) vends=vends.filter(u=>Number(u.supervisorId)===Number(filterSup));
+  const inactivos=vends.filter(u=>pedidosUltimosDias(u.id,5)===0)
+    .map(u=>({u,ultimo:ultimoPedidoISO(u.id)}))
+    .sort((a,b)=>{const da=a.ultimo?diasDesdeISO(a.ultimo):9999; const db=b.ultimo?diasDesdeISO(b.ultimo):9999; return db-da;});
+  if(badge){ badge.textContent=inactivos.length; badge.className="badge "+(inactivos.length?"badge-red":"badge-green"); }
+  if(!vends.length){ body.innerHTML=`<div class="text-muted" style="font-size:12px;padding:4px 0">No hay vendedores cargados${filterSup?" para este supervisor":""}.</div>`; return; }
+  if(!inactivos.length){ body.innerHTML=`<div style="font-size:12.5px;color:var(--green-text);background:var(--green-bg);padding:10px 14px;border-radius:8px;display:inline-block">✓ Todos los vendedores${filterSup?" del supervisor":""} cargaron pedidos en los últimos 5 días.</div>`; return; }
+  body.innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:8px">`+inactivos.map(({u,ultimo})=>{
+    const dias=diasDesdeISO(ultimo);
+    const sub = ultimo ? `Último pedido: hace ${dias} ${dias===1?"día":"días"}` : "Sin pedidos registrados";
+    const sup=USERS.find(x=>x.id===u.supervisorId);
+    return `<div style="display:flex;flex-direction:column;gap:1px;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:8px;min-width:170px"><span style="font-weight:700;font-size:12.5px;color:var(--navy)">${escHtml(userName(u))}</span><span style="font-size:11px;color:var(--accent);font-weight:600">${sub}</span>${sup?`<span style="font-size:10px;color:var(--text3)">Sup: ${escHtml(userName(sup))}</span>`:""}</div>`;
+  }).join("")+`</div>`;
 }
 function renderDashAlertas(){
   const clientMap={};

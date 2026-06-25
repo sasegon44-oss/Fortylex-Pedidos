@@ -293,6 +293,7 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
         <div class="flex-wrap mb-4">
           <select id="dash-filter-depto" onchange="renderDashboard()" style="width:200px"><option value="">Todos los departamentos</option></select>
           <select id="dash-filter-sup" onchange="renderDashboard()" style="width:180px"><option value="">Todos los supervisores</option></select>
+          <select id="dash-filter-vend" onchange="renderDashboard()" style="width:180px"><option value="">Todos los vendedores</option></select>
         </div>
         <div class="kpi-grid" id="dash-kpis"></div>
         <div class="grid-2 mb-4">
@@ -933,10 +934,14 @@ function renderDashboard(){
   let all=getVisiblePedidos();
   const filterDepto=document.getElementById("dash-filter-depto")?.value||"";
   const filterSup=document.getElementById("dash-filter-sup")?.value||"";
+  const filterVend=document.getElementById("dash-filter-vend")?.value||"";
   const supSel=document.getElementById("dash-filter-sup");
   if(supSel&&supSel.options.length<=1){USERS.filter(u=>u.role==="supervisor").forEach(u=>{const o=document.createElement("option");o.value=u.id;o.textContent=userName(u);supSel.appendChild(o);});}
+  const vendSel=document.getElementById("dash-filter-vend");
+  if(vendSel&&vendSel.options.length<=1){USERS.filter(u=>u.role==="vendedor").forEach(u=>{const o=document.createElement("option");o.value=u.id;o.textContent=userName(u);vendSel.appendChild(o);});}
   if(filterDepto) all=all.filter(p=>p.departamento===filterDepto);
   if(filterSup) all=all.filter(p=>p.userId===Number(filterSup));
+  if(filterVend) all=all.filter(p=>p.userId===Number(filterVend));
   const mes=getCurrentMes(); const allMes=all.filter(p=>p.fechaISO?.startsWith(mes));
   const totalMonto=all.reduce((s,p)=>s+(p.total||0),0);
   const facturado=all.reduce((s,p)=>s+(p.montofacturado||0),0);

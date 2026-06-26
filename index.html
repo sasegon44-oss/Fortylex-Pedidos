@@ -1334,10 +1334,29 @@ function editPedido(id){
 function addLinea(){ const dtoFijo=Number(document.getElementById("p-dto-fijo").value)||0; lineas.push({linea:"",productoId:"",nombre:"",codigo:"",marca:"",presentacion:"",precio:0,dtoFijo,dtoEsp:0,cantidad:1,unidad:"",obs:""}); renderLineas(); }
 function removeLinea(idx){lineas.splice(idx,1); renderLineas();}
 function updateLineaField(idx,field,val){
-  if(field==="linea"){ lineas[idx].linea=val; lineas[idx].productoId=""; lineas[idx].nombre=""; lineas[idx].codigo=""; lineas[idx].marca=""; lineas[idx].presentacion=""; lineas[idx].precio=0; }
-  else if(field==="productoId"){ const prod=PRODUCTS.find(p=>String(p.id)===String(val)); if(prod){ lineas[idx].productoId=prod.id; lineas[idx].nombre=prod.nombre; lineas[idx].codigo=prod.codigo; lineas[idx].marca=prod.marca; lineas[idx].presentacion=prod.presentacion; lineas[idx].precio=prod.precio; if(prod.unidad) lineas[idx].unidad=prod.unidad; } }
-  else { lineas[idx][field]=val; }
-  renderLineas();
+  if(field==="linea"){ lineas[idx].linea=val; lineas[idx].productoId=""; lineas[idx].nombre=""; lineas[idx].codigo=""; lineas[idx].marca=""; lineas[idx].presentacion=""; lineas[idx].precio=0; renderLineas(); return; }
+  else if(field==="productoId"){ const prod=PRODUCTS.find(p=>String(p.id)===String(val)); if(prod){ lineas[idx].productoId=prod.id; lineas[idx].nombre=prod.nombre; lineas[idx].codigo=prod.codigo; lineas[idx].marca=prod.marca; lineas[idx].presentacion=prod.presentacion; lineas[idx].precio=prod.precio; if(prod.unidad) lineas[idx].unidad=prod.unidad; } renderLineas(); return; }
+  // Campos que el usuario escribe (cantidad, dtoFijo, dtoEsp, unidad, obs):
+  // NO re-renderizamos la tabla entera (eso destruye el input y pierde el foco).
+  // Solo actualizamos el dato y recalculamos los totales en su lugar.
+  lineas[idx][field]=val;
+  recalcLineaTotales();
+}
+function recalcLineaTotales(){
+  const tbody=document.getElementById("lineas-body"); if(!tbody)return;
+  const dtoEx=Number(document.getElementById("p-dto-extra").value)||0; let totalG=0;
+  const rows=tbody.querySelectorAll("tr");
+  lineas.forEach((l,i)=>{
+    const sub=(Number(l.precio)||0)*(Number(l.cantidad)||0);
+    const dF=Number(l.dtoFijo)||0, dE=Number(l.dtoEsp)||0;
+    const tot=sub*(1-dF/100)*(1-dE/100)*(1-dtoEx/100); totalG+=tot;
+    const row=rows[i]; if(!row)return;
+    const subCell=row.querySelector(".col-subtotal");
+    const totCell=row.querySelector(".col-total");
+    if(subCell) subCell.textContent="$"+fmt(sub);
+    if(totCell) totCell.textContent="$"+fmt(tot);
+  });
+  const tg=document.getElementById("p-total"); if(tg) tg.textContent="$"+fmt(totalG);
 }
 function initColResizers(){
   const table=document.querySelector('#modal-pedido .pedido-table');

@@ -189,6 +189,7 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
 .iss-option:hover{background:var(--surface);border-left-color:var(--accent);color:var(--accent)}
 .iss-option.selected{background:#fff0f0;border-left-color:var(--accent);color:var(--crimson);font-weight:700}
 .iss-option.no-results{color:var(--text3);font-style:italic;cursor:default;padding:12px 9px;text-align:center}
+.iss-option.hi{background:var(--accent-light);border-left-color:var(--accent);color:var(--accent)}
 .profile-section{background:var(--white);border-radius:var(--rl);border:1px solid var(--border);padding:24px;margin-bottom:16px}
 .profile-section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--crimson2);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--border)}
 .status-dot{width:8px;height:8px;border-radius:50%;display:inline-block}.status-active{background:var(--green)}.status-inactive{background:var(--text3)}
@@ -469,7 +470,7 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
       </tr></thead><tbody id="lineas-body"></tbody></table><datalist id="unidades-datalist"><option value="Unidad"></option><option value="Caja"></option><option value="Bulto"></option><option value="Pack"></option><option value="Display"></option><option value="Docena"></option><option value="Kg"></option><option value="Litro"></option></datalist>
     </div></div>
     <div class="flex-between">
-      <button class="btn btn-success btn-sm" onclick="addLinea()">+ Agregar línea</button>
+      <button class="btn btn-success btn-sm" onclick="addLinea(true)">+ Agregar línea</button>
       <div class="flex" style="gap:16px"><div style="text-align:right"><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em">Total s/IVA</div><div style="font-size:26px;font-weight:800;color:var(--navy)" id="p-total">$0,00</div></div><button class="btn btn-primary" id="btn-guardar-pedido" onclick="savePedido()">💾 Guardar pedido</button></div>
     </div>
   </div>
@@ -909,7 +910,7 @@ function ssGetValue(containerId){return document.getElementById(containerId)?._s
 function issInit(){
   if(document.getElementById("_iss_dd"))return;
   const dd=document.createElement("div"); dd.id="_iss_dd"; dd.className="iss-dropdown";
-  dd.innerHTML=`<div class="iss-search"><input type="text" id="_iss_search" placeholder="Buscar..." oninput="issFilterActive(this.value)" onclick="event.stopPropagation()"></div><div class="iss-list" id="_iss_list"></div>`;
+  dd.innerHTML=`<div class="iss-search"><input type="text" id="_iss_search" placeholder="Buscar..." oninput="issFilterActive(this.value)" onkeydown="issKey(event)" onclick="event.stopPropagation()"></div><div class="iss-list" id="_iss_list"></div>`;
   document.body.appendChild(dd); _issDropdownEl=dd;
   document.addEventListener("mousedown",e=>{if(!e.target.closest("#_iss_dd")&&!e.target.classList.contains("iss-input"))issClose();});
 }
@@ -918,7 +919,7 @@ function issOpen(triggerEl,idx,field){
   const l=lineas[idx]; let opts=[];
   if(field==="linea"){ opts=LINEAS_NEGOCIO.map(ln=>({value:ln,label:ln})); }
   else if(field==="productoId"){ const prods=l.linea?PRODUCTS.filter(p=>p.linea===l.linea):PRODUCTS; opts=prods.map(p=>({value:p.id,label:`${p.nombre} (${p.codigo})`})); }
-  _issActive={idx,field,options:opts,triggerEl};
+  _issActive={idx,field,options:opts,triggerEl,filtered:opts,hi:-1};
   const rect=triggerEl.getBoundingClientRect(); const dd=_issDropdownEl;
   dd.style.top=(rect.bottom+2)+"px"; dd.style.left=rect.left+"px"; dd.style.width=Math.max(260,rect.width)+"px";
   const currentVal=field==="linea"?l.linea:String(l.productoId||"");
@@ -927,23 +928,56 @@ function issOpen(triggerEl,idx,field){
 }
 function issRenderList(opts,selectedVal){
   const list=document.getElementById("_iss_list"); if(!list)return;
-  if(!opts.length){list.innerHTML=`<div class="iss-option no-results">Sin opciones</div>`;return;}
-  list.innerHTML=opts.map(o=>`<div class="iss-option ${String(o.value)===String(selectedVal)?"selected":""}" onclick="issPick('${o.value}',\`${String(o.label).replace(/`/g,"'").replace(/\\/g,"\\\\")}\`)">${escHtml(o.label)}</div>`).join("");
+  if(_issActive) _issActive.filtered=opts;
+  if(!opts.length){list.innerHTML=`<div class="iss-option no-results">Sin opciones</div>`; if(_issActive)_issActive.hi=-1; return;}
+  let hi=_issActive?_issActive.hi:0;
+  if(hi==null||hi<0||hi>=opts.length){ const s=opts.findIndex(o=>String(o.value)===String(selectedVal)); hi=s>=0?s:0; }
+  if(_issActive)_issActive.hi=hi;
+  list.innerHTML=opts.map((o,i)=>`<div class="iss-option ${String(o.value)===String(selectedVal)?"selected":""} ${i===hi?"hi":""}" data-i="${i}" onclick="issPick('${o.value}',\`${String(o.label).replace(/`/g,"'").replace(/\\/g,"\\\\")}\`)">${escHtml(o.label)}</div>`).join("");
+}
+function issHighlight(){
+  const list=document.getElementById("_iss_list"); if(!list||!_issActive)return;
+  const items=list.querySelectorAll(".iss-option");
+  items.forEach((el,i)=>el.classList.toggle("hi",i===_issActive.hi));
+  if(items[_issActive.hi]) items[_issActive.hi].scrollIntoView({block:"nearest"});
+}
+function issKey(e){
+  if(!_issActive)return;
+  const opts=_issActive.filtered||[];
+  if(e.key==="ArrowDown"){ e.preventDefault(); if(!opts.length)return; _issActive.hi=Math.min((_issActive.hi||0)+1,opts.length-1); issHighlight(); }
+  else if(e.key==="ArrowUp"){ e.preventDefault(); if(!opts.length)return; _issActive.hi=Math.max((_issActive.hi||0)-1,0); issHighlight(); }
+  else if(e.key==="Enter"){ e.preventDefault(); const o=opts[_issActive.hi]; if(o) issPick(String(o.value),o.label); }
+  else if(e.key==="Escape"){ e.preventDefault(); issClose(); }
 }
 function issFilterActive(q){
   if(!_issActive)return;
   const filtered=_issActive.options.filter(o=>o.label.toLowerCase().includes(q.toLowerCase()));
+  _issActive.hi=filtered.length?0:-1;
   const l=lineas[_issActive.idx]; const field=_issActive.field;
   const currentVal=field==="linea"?l.linea:String(l.productoId||"");
   issRenderList(filtered,currentVal);
 }
 function issPick(value,label){
   if(!_issActive)return;
-  const {idx,field}=_issActive; const inputId=`iss_${idx}_${field}_inp`;
-  const inp=document.getElementById(inputId); if(inp) inp.value=label;
+  const {idx,field}=_issActive;
   issClose(); updateLineaField(idx,field,value);
+  // Flujo de teclado: encadenar al siguiente paso sin tocar el mouse
+  setTimeout(()=>{
+    if(field==="linea"){ openLineaSelect(idx,'productoId'); }
+    else if(field==="productoId"){ focusCantCell(idx); }
+  },0);
 }
 function issClose(){if(_issDropdownEl) _issDropdownEl.classList.remove("open"); _issActive=null;}
+function openLineaSelect(idx,field){
+  const inp=document.getElementById(`iss_${idx}_${field}_inp`);
+  if(inp && !inp.disabled) inp.click();
+}
+function focusCantCell(idx){
+  const tbody=document.getElementById("lineas-body"); if(!tbody)return;
+  const row=tbody.querySelectorAll("tr")[idx]; if(!row)return;
+  const inp=row.querySelector(".col-cant input");
+  if(inp){ inp.focus(); inp.select(); }
+}
 function buildISSInput(idx,field,displayVal,disabled=false){
   const inputId=`iss_${idx}_${field}_inp`;
   return`<div class="iss-wrap"><input type="text" class="iss-input" id="${inputId}" value="${escHtml(displayVal)}" readonly ${disabled?"disabled":""} onclick="if(!this.disabled){issOpen(this,${idx},'${field}')}" placeholder="— ${field==="linea"?"Línea":"Producto"} —" style="${disabled?"opacity:.45;cursor:not-allowed;":"cursor:pointer;"}"><span class="iss-arrow">▾</span></div>`;
@@ -1331,15 +1365,44 @@ function editPedido(id){
   document.getElementById("p-depto").value=p.departamento||"";
   renderLineas(); document.getElementById("modal-pedido").classList.add("open"); initColResizers();
 }
-function addLinea(){ const dtoFijo=Number(document.getElementById("p-dto-fijo").value)||0; lineas.push({linea:"",productoId:"",nombre:"",codigo:"",marca:"",presentacion:"",precio:0,dtoFijo,dtoEsp:0,cantidad:1,unidad:"",obs:""}); renderLineas(); }
+function addLinea(focusNew){ const dtoFijo=Number(document.getElementById("p-dto-fijo").value)||0; lineas.push({linea:"",productoId:"",nombre:"",codigo:"",marca:"",presentacion:"",precio:0,dtoFijo,dtoEsp:0,cantidad:1,unidad:"",obs:""}); renderLineas(); if(focusNew){ setTimeout(()=>openLineaSelect(lineas.length-1,'linea'),0); } }
 function removeLinea(idx){lineas.splice(idx,1); renderLineas();}
 function updateLineaField(idx,field,val){
   if(field==="linea"){ lineas[idx].linea=val; lineas[idx].productoId=""; lineas[idx].nombre=""; lineas[idx].codigo=""; lineas[idx].marca=""; lineas[idx].presentacion=""; lineas[idx].precio=0; renderLineas(); return; }
-  else if(field==="productoId"){ const prod=PRODUCTS.find(p=>String(p.id)===String(val)); if(prod){ lineas[idx].productoId=prod.id; lineas[idx].nombre=prod.nombre; lineas[idx].codigo=prod.codigo; lineas[idx].marca=prod.marca; lineas[idx].presentacion=prod.presentacion; lineas[idx].precio=prod.precio; if(prod.unidad) lineas[idx].unidad=prod.unidad; } renderLineas(); return; }
+  else if(field==="productoId"){
+    const prod=PRODUCTS.find(p=>String(p.id)===String(val));
+    if(prod){
+      // Aviso de producto duplicado (no bloquea, solo avisa)
+      const dup=lineas.findIndex((l,j)=>j!==idx && String(l.productoId)===String(prod.id));
+      if(dup!==-1){ toast(`⚠ "${prod.nombre}" ya está cargado en la línea ${dup+1}`,"info"); }
+      lineas[idx].productoId=prod.id; lineas[idx].nombre=prod.nombre; lineas[idx].codigo=prod.codigo; lineas[idx].marca=prod.marca; lineas[idx].presentacion=prod.presentacion; lineas[idx].precio=prod.precio; if(prod.unidad) lineas[idx].unidad=prod.unidad;
+    }
+    renderLineas(); return;
+  }
   // Campos que el usuario escribe (cantidad, dtoFijo, dtoEsp, unidad, obs):
   // NO re-renderizamos la tabla entera (eso destruye el input y pierde el foco).
   // Solo actualizamos el dato y recalculamos los totales en su lugar.
   lineas[idx][field]=val;
+  recalcLineaTotales();
+}
+// Enter en Cantidad: si es la última línea agrega una nueva (y abre su selector
+// de Línea); si no, salta al producto de la siguiente. Flujo 100% teclado.
+function lineaCantKeydown(e,idx){
+  if(e.key==="Enter"){
+    e.preventDefault(); normalizeCant(idx);
+    if(idx>=lineas.length-1){ addLinea(true); }
+    else { openLineaSelect(idx+1, lineas[idx+1].linea?'productoId':'linea'); }
+  }
+}
+// Guard: si la cantidad queda vacía/inválida, la vuelve a 1.
+function normalizeCant(idx){
+  let n=Number(lineas[idx].cantidad);
+  if(!Number.isFinite(n)||n<1){ n=1; lineas[idx].cantidad=1;
+    const tbody=document.getElementById("lineas-body");
+    const row=tbody?tbody.querySelectorAll("tr")[idx]:null;
+    const inp=row?row.querySelector(".col-cant input"):null;
+    if(inp) inp.value="1";
+  } else { lineas[idx].cantidad=n; }
   recalcLineaTotales();
 }
 function recalcLineaTotales(){
@@ -1381,7 +1444,7 @@ function renderLineas(){
   tbody.innerHTML=lineas.map((l,i)=>{
     const sub=l.precio*l.cantidad; const dF=Number(l.dtoFijo)||0; const dE=Number(l.dtoEsp)||0;
     const tot=sub*(1-dF/100)*(1-dE/100)*(1-dtoEx/100); totalG+=tot;
-    return`<tr><td class="col-num" style="font-weight:700;color:var(--text3)">${i+1}</td><td class="col-linea">${buildISSInput(i,'linea',l.linea)}</td><td class="col-marca"><input type="text" class="sm-inp readonly-field" readonly value="${escHtml(l.marca)}"></td><td class="col-prod">${buildISSInput(i,'productoId',l.nombre?`${l.nombre} (${l.codigo})`:'',!l.linea)}</td><td class="col-cod"><input type="text" class="sm-inp readonly-field mono" readonly value="${escHtml(l.codigo)}"></td><td class="col-pres"><input type="text" class="sm-inp readonly-field" readonly value="${escHtml(l.presentacion)}"></td><td class="col-precio"><input type="text" class="sm-inp readonly-field text-right mono" readonly value="$${fmt(l.precio)}"></td><td class="col-dtofijo"><input type="number" class="num-inp" value="${l.dtoFijo}" min="0" max="100" oninput="updateLineaField(${i},'dtoFijo',this.value)"></td><td class="col-dtoesp"><input type="number" class="num-inp" value="${l.dtoEsp}" min="0" max="100" oninput="updateLineaField(${i},'dtoEsp',this.value)"></td><td class="col-cant"><input type="number" class="num-inp" value="${l.cantidad}" min="1" oninput="updateLineaField(${i},'cantidad',this.value)"></td><td class="col-unidad"><input type="text" class="sm-inp" list="unidades-datalist" value="${escHtml(l.unidad||'')}" placeholder="Unid." onchange="updateLineaField(${i},'unidad',this.value)"></td><td class="col-subtotal mono" style="text-align:right;font-weight:600;padding-right:6px">$${fmt(sub)}</td><td class="col-total mono" style="text-align:right;font-weight:700;color:var(--green);padding-right:6px">$${fmt(tot)}</td><td class="col-obs"><input type="text" class="sm-inp" value="${escHtml(l.obs)}" placeholder="..." onchange="updateLineaField(${i},'obs',this.value)"></td><td class="col-del" style="text-align:center"><button class="btn btn-ghost btn-sm" style="color:var(--accent);padding:3px 6px" onclick="removeLinea(${i})">🗑</button></td></tr>`;
+    return`<tr><td class="col-num" style="font-weight:700;color:var(--text3)">${i+1}</td><td class="col-linea">${buildISSInput(i,'linea',l.linea)}</td><td class="col-marca"><input type="text" class="sm-inp readonly-field" readonly value="${escHtml(l.marca)}"></td><td class="col-prod">${buildISSInput(i,'productoId',l.nombre?`${l.nombre} (${l.codigo})`:'',!l.linea)}</td><td class="col-cod"><input type="text" class="sm-inp readonly-field mono" readonly value="${escHtml(l.codigo)}"></td><td class="col-pres"><input type="text" class="sm-inp readonly-field" readonly value="${escHtml(l.presentacion)}"></td><td class="col-precio"><input type="text" class="sm-inp readonly-field text-right mono" readonly value="$${fmt(l.precio)}"></td><td class="col-dtofijo"><input type="number" class="num-inp" value="${l.dtoFijo}" min="0" max="100" oninput="updateLineaField(${i},'dtoFijo',this.value)"></td><td class="col-dtoesp"><input type="number" class="num-inp" value="${l.dtoEsp}" min="0" max="100" oninput="updateLineaField(${i},'dtoEsp',this.value)"></td><td class="col-cant"><input type="number" class="num-inp" value="${l.cantidad}" min="1" oninput="updateLineaField(${i},'cantidad',this.value)" onkeydown="lineaCantKeydown(event,${i})" onblur="normalizeCant(${i})"></td><td class="col-unidad"><input type="text" class="sm-inp" list="unidades-datalist" value="${escHtml(l.unidad||'')}" placeholder="Unid." onchange="updateLineaField(${i},'unidad',this.value)"></td><td class="col-subtotal mono" style="text-align:right;font-weight:600;padding-right:6px">$${fmt(sub)}</td><td class="col-total mono" style="text-align:right;font-weight:700;color:var(--green);padding-right:6px">$${fmt(tot)}</td><td class="col-obs"><input type="text" class="sm-inp" value="${escHtml(l.obs)}" placeholder="..." onchange="updateLineaField(${i},'obs',this.value)"></td><td class="col-del" style="text-align:center"><button class="btn btn-ghost btn-sm" style="color:var(--accent);padding:3px 6px" onclick="removeLinea(${i})">🗑</button></td></tr>`;
   }).join("");
   if(!lineas.length) tbody.innerHTML=`<tr><td colspan="15" style="text-align:center;padding:24px;color:var(--text3);font-style:italic">No hay líneas en este pedido. Hacé clic en "Agregar línea".</td></tr>`;
   document.getElementById("p-total").textContent="$"+fmt(totalG);

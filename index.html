@@ -734,6 +734,19 @@ function toast(msg, type="info", duration=3000){const el=document.createElement(
 // ════════════════════════════════════════════════
 // SUPABASE DATA LAYER
 // ════════════════════════════════════════════════
+async function fetchAll(table, selectStr="*"){
+  // Supabase devuelve máx. 1000 filas por consulta. Paginamos con .range() para traerlas TODAS.
+  const PAGE=1000; let from=0, all=[];
+  while(true){
+    const r=await db.from(table).select(selectStr).range(from, from+PAGE-1);
+    if(r.error) throw r.error;
+    const batch=r.data||[];
+    all=all.concat(batch);
+    if(batch.length<PAGE) break;
+    from+=PAGE;
+  }
+  return all;
+}
 async function loadAllData(){
   if(DEMO_MODE){ loadDemoData(); return; }
   if(!_initialLoad){
@@ -742,23 +755,18 @@ async function loadAllData(){
   }
   setLoading("Cargando datos...");
   try {
-    const [usersRes, prodsRes, cliRes, pedsRes, metasRes] = await Promise.all([
-      db.from("users").select("*"),
-      db.from("products").select("*"),
-      db.from("clients").select("*"),
-      db.from("orders").select("*, order_lines(*)"),
-      db.from("metas").select("*"),
+    const [usersData, prodsData, cliData, pedsData, metasData] = await Promise.all([
+      fetchAll("users"),
+      fetchAll("products"),
+      fetchAll("clients"),
+      fetchAll("orders","*, order_lines(*)"),
+      fetchAll("metas"),
     ]);
-    if(usersRes.error) throw usersRes.error;
-    if(prodsRes.error) throw prodsRes.error;
-    if(cliRes.error) throw cliRes.error;
-    if(pedsRes.error) throw pedsRes.error;
-    if(metasRes.error) throw metasRes.error;
-    USERS = usersRes.data || [];
-    PRODUCTS = prodsRes.data || [];
-    CLIENTS = cliRes.data || [];
-    PEDIDOS = (pedsRes.data||[]).map(p=>({...p,lineas:p.order_lines||[],clienteId:p.cliente_id,clienteNombre:p.cliente_nombre,userId:p.user_id,userName:p.user_name,fechaISO:p.fecha_iso,montofacturado:p.monto_facturado,dtoFijo:p.dto_fijo,dtoExtra:p.dto_extra,razonSocial:p.razon_social}));
-    METAS = (metasRes.data||[]).map(m=>({...m,supId:m.sup_id,supName:m.sup_name,distClientes:m.dist_clientes||[]}));
+    USERS = usersData || [];
+    PRODUCTS = prodsData || [];
+    CLIENTS = cliData || [];
+    PEDIDOS = (pedsData||[]).map(p=>({...p,lineas:p.order_lines||[],clienteId:p.cliente_id,clienteNombre:p.cliente_nombre,userId:p.user_id,userName:p.user_name,fechaISO:p.fecha_iso,montofacturado:p.monto_facturado,dtoFijo:p.dto_fijo,dtoExtra:p.dto_extra,razonSocial:p.razon_social}));
+    METAS = (metasData||[]).map(m=>({...m,supId:m.sup_id,supName:m.sup_name,distClientes:m.dist_clientes||[]}));
     USERS = USERS.map(u=>({...u, firstLogin: u.first_login, supervisorId: u.supervisor_id}));
     CLIENTS = CLIENTS.map(c=>{
       let dep=c.departamento;
@@ -1317,7 +1325,7 @@ async function enviarPedidoEmail(id){
 function buildDistribuidorOptions(){ return [...new Set(CLIENTS.map(c=>c.distribuidor).filter(Boolean))].map(d=>({value:d,label:d})); }
 function clientesParaDistribuidor(distrib){
   const list = distrib ? CLIENTS.filter(c=>(c.distribuidor||"")===distrib) : CLIENTS;
-  return list.map(c=>({value:c.id,label:c.nombre+" ("+c.codigo+")"}));
+  return list.slice().sort((a,b)=>String(a.nombre||"").localeCompare(String(b.nombre||""),"es")).map(c=>({value:c.id,label:c.nombre+" ("+c.codigo+")"}));
 }
 function onDistribuidorChange(distrib){
   document.getElementById("p-distribuidor").value = distrib||"";

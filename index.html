@@ -354,6 +354,7 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
           <select id="dash-filter-depto" onchange="renderDashboard()" style="width:200px"><option value="">Todos los departamentos</option></select>
           <select id="dash-filter-sup" onchange="renderDashboard()" style="width:180px"><option value="">Todos los supervisores</option></select>
           <select id="dash-filter-vend" onchange="renderDashboard()" style="width:180px"><option value="">Todos los vendedores</option></select>
+          <select id="dash-filter-linea" onchange="renderDashboard()" style="width:170px"><option value="">Todas las líneas</option></select>
         </div>
         <div class="kpi-grid" id="dash-kpis"></div>
         <div class="card mb-4" id="dash-inactivos-card"><div class="card-header"><span class="card-title">😴 Vendedores sin pedidos en los últimos 5 días</span><span id="dash-inactivos-count" class="badge badge-yellow">0</span></div><div class="card-body" id="dash-inactivos-body"></div></div>
@@ -373,6 +374,7 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
             <input type="text" id="filtro-cliente" placeholder="Filtrar cliente..." style="width:150px" oninput="renderPedidos()">
             <select id="filtro-estado" onchange="renderPedidos()" style="width:180px"><option value="">Todos los estados</option><option>Pendiente de corroboración</option><option>Facturado</option><option>No facturado</option><option>Facturado parcial</option></select>
             <select id="filtro-depto" onchange="renderPedidos()" style="width:180px"><option value="">Todos los departamentos</option></select>
+            <select id="filtro-linea" onchange="renderPedidos()" style="width:160px"><option value="">Todas las líneas</option></select>
             <input type="date" id="filtro-fecha" onchange="renderPedidos()" style="width:148px">
           </div>
           <div class="flex">
@@ -866,6 +868,12 @@ function initDeptoDropdowns(){
     el.appendChild(first||Object.assign(document.createElement("option"),{value:"",textContent:"Todos los departamentos"}));
     DEPTOS_UY.forEach(d=>el.appendChild(Object.assign(document.createElement("option"),{value:d,textContent:d})));
   });
+  [["filtro-linea","Todas las líneas"],["dash-filter-linea","Todas las líneas"]].forEach(([id,ph])=>{
+    const el=document.getElementById(id); if(!el)return;
+    const prev=el.value;
+    el.innerHTML=`<option value="">${ph}</option>`+LINEAS_NEGOCIO.map(l=>`<option value="${l}">${l}</option>`).join("");
+    el.value=prev;
+  });
   const cd=document.getElementById("cli-depto");
   if(cd) cd.innerHTML="<option value=''>— Seleccionar —</option>"+DEPTOS_UY.map(d=>`<option value="${d}">${d}</option>`).join("");
   const dl=document.getElementById("deptos-datalist");
@@ -1136,9 +1144,11 @@ function renderDashboard(){
     vendSel.innerHTML=`<option value="">Todos los vendedores</option>`+vends.map(u=>`<option value="${u.id}">${escHtml(userName(u))} (${pedidosUltimosDias(u.id,7)})</option>`).join("");
     vendSel.value=prev;
   }
+  const filterLinea=document.getElementById("dash-filter-linea")?.value||"";
   if(filterDepto) all=all.filter(p=>p.departamento===filterDepto);
   if(filterSup){ const ids=teamUserIds(filterSup); all=all.filter(p=>ids.includes(p.userId)); }
   if(filterVend) all=all.filter(p=>p.userId===Number(filterVend));
+  if(filterLinea) all=all.filter(p=>(p.lineas||[]).some(l=>l.linea===filterLinea));
   const mes=getCurrentMes(); const allMes=all.filter(p=>p.fechaISO?.startsWith(mes));
   const totalMonto=all.reduce((s,p)=>s+(p.total||0),0);
   const facturado=all.reduce((s,p)=>s+(p.montofacturado||0),0);
@@ -1224,8 +1234,9 @@ function renderPedidos(){
   const fe=document.getElementById("filtro-estado").value;
   const ff=document.getElementById("filtro-fecha").value;
   const fd=document.getElementById("filtro-depto").value;
-  const filtered=ped.filter(p=>{if(fc&&!p.clienteNombre.toLowerCase().includes(fc))return false; if(fe&&p.estado!==fe)return false; if(ff&&p.fechaISO!==ff)return false; if(fd&&p.departamento!==fd)return false; return true;}).sort((a,b)=>String(b.id).localeCompare(String(a.id)));
-  const sig=JSON.stringify([fc,fe,ff,fd,filtered.length]);
+  const fl=document.getElementById("filtro-linea")?.value||"";
+  const filtered=ped.filter(p=>{if(fc&&!p.clienteNombre.toLowerCase().includes(fc))return false; if(fe&&p.estado!==fe)return false; if(ff&&p.fechaISO!==ff)return false; if(fd&&p.departamento!==fd)return false; if(fl&&!(p.lineas||[]).some(l=>l.linea===fl))return false; return true;}).sort((a,b)=>String(b.id).localeCompare(String(a.id)));
+  const sig=JSON.stringify([fc,fe,ff,fd,fl,filtered.length]);
   if(sig!==_pedSig){ _pedSig=sig; pedidosPage=1; }
   const totalPages=Math.max(1,Math.ceil(filtered.length/PAGE_SIZE));
   if(pedidosPage>totalPages) pedidosPage=totalPages;
@@ -1855,9 +1866,10 @@ function downloadTemplate(){
   const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Plantilla");
   XLSX.writeFile(wb,`plantilla_${importType}.xlsx`);
 }
+function pedidoLineasTexto(p){ return [...new Set((p.lineas||[]).map(l=>l.linea).filter(Boolean))].join(", "); }
 function exportarExcel(){
   const visible=getVisiblePedidos();
-  const rows=visible.map(p=>({"ID Pedido":p.id,"Fecha":p.fecha,"Vendedor/Supervisor":p.userName,"Cliente":p.clienteNombre,"Distribuidor":p.distribuidor,"Departamento":p.departamento,"Total Solicitado ($)":p.total,"Monto Facturado ($)":p.montofacturado||0,"Diferencia ($)":p.montofacturado!=null?(p.total-p.montofacturado):0,"Estado":p.estado,"Notas":p.notas}));
+  const rows=visible.map(p=>({"ID Pedido":p.id,"Fecha":p.fecha,"Vendedor/Supervisor":p.userName,"Cliente":p.clienteNombre,"Distribuidor":p.distribuidor,"Departamento":p.departamento,"Líneas":pedidoLineasTexto(p),"Items":p.lineas?.length||0,"Total Solicitado ($)":p.total,"Monto Facturado ($)":p.montofacturado||0,"Diferencia ($)":p.montofacturado!=null?(p.total-p.montofacturado):0,"Estado":p.estado,"Notas":p.notas}));
   const ws=XLSX.utils.json_to_sheet(rows); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Pedidos");
   XLSX.writeFile(wb,`Reporte_Pedidos_${new Date().toISOString().slice(0,10)}.xlsx`);
 }

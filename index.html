@@ -397,7 +397,7 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
             <input type="text" placeholder="Buscar cliente..." id="cli-search" style="width:200px" oninput="renderClientes()">
             <select id="cli-filter-depto" onchange="renderClientes()" style="width:180px"><option value="">Todos los departamentos</option></select>
           </div>
-          <div class="flex"><button class="btn btn-ghost btn-sm admin-only" onclick="openImportModal('clientes')">⬆ Importar Excel</button><button class="btn btn-primary admin-only" onclick="openClienteModal()">+ Nuevo cliente</button></div>
+          <div class="flex"><button class="btn btn-ghost btn-sm" onclick="exportarClientesExcel()">⬇ Exportar Excel</button><button class="btn btn-ghost btn-sm admin-only" onclick="openImportModal('clientes')">⬆ Importar Excel</button><button class="btn btn-primary admin-only" onclick="openClienteModal()">+ Nuevo cliente</button></div>
         </div>
         <div class="card" style="padding:0;overflow:hidden"><div class="table-wrap">
           <table><thead><tr><th>Nombre</th><th>Código</th><th>Canal</th><th>Departamento</th><th>Dirección</th><th>Supervisor</th><th>Distribuidor</th><th>Dto. Fijo%</th><th>Pedidos</th><th></th></tr></thead><tbody id="tbody-clientes"></tbody></table>
@@ -433,7 +433,7 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
           <button class="btn btn-ghost btn-sm" id="adm-tab-productos" onclick="admTab('productos')">Productos</button>
         </div>
         <div id="adm-clientes">
-          <div class="flex-between mb-4"><input type="text" placeholder="Buscar..." id="adm-cli-search" style="width:200px" oninput="renderAdmClientes()"><div class="flex"><button class="btn btn-ghost btn-sm" onclick="openImportModal('clientes')">⬆ Importar Excel</button><button class="btn btn-primary btn-sm" onclick="openClienteModal()">+ Nuevo cliente</button></div></div>
+          <div class="flex-between mb-4"><input type="text" placeholder="Buscar..." id="adm-cli-search" style="width:200px" oninput="renderAdmClientes()"><div class="flex"><button class="btn btn-ghost btn-sm" onclick="exportarClientesExcel()">⬇ Exportar Excel</button><button class="btn btn-ghost btn-sm" onclick="openImportModal('clientes')">⬆ Importar Excel</button><button class="btn btn-primary btn-sm" onclick="openClienteModal()">+ Nuevo cliente</button></div></div>
           <div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Código</th><th>Canal</th><th>Departamento</th><th>Supervisor</th><th>Distribuidor</th><th>Dto. Fijo%</th><th></th></tr></thead><tbody id="tbody-adm-clientes"></tbody></table></div></div>
         </div>
         <div id="adm-usuarios" style="display:none">
@@ -441,7 +441,7 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
           <div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Reporta a</th><th>Estado</th><th></th></tr></thead><tbody id="tbody-adm-usuarios"></tbody></table></div></div>
         </div>
         <div id="adm-productos" style="display:none">
-          <div class="flex-between mb-4"><span style="font-size:12px;color:var(--text2)">Catálogo de productos</span><div class="flex"><button class="btn btn-ghost btn-sm" onclick="openImportModal('productos')">⬆ Importar Excel</button><button class="btn btn-primary btn-sm" onclick="openProductoModal()">+ Nuevo producto</button></div></div>
+          <div class="flex-between mb-4"><span style="font-size:12px;color:var(--text2)">Catálogo de productos</span><div class="flex"><button class="btn btn-ghost btn-sm" onclick="exportarProductosExcel()">⬇ Exportar Excel</button><button class="btn btn-ghost btn-sm" onclick="openImportModal('productos')">⬆ Importar / Actualizar Excel</button><button class="btn btn-primary btn-sm" onclick="openProductoModal()">+ Nuevo producto</button></div></div>
           <div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table><thead><tr><th>Línea</th><th>Marca</th><th>Producto</th><th>Código</th><th>Presentación</th><th>Unidad de venta</th><th>Precio</th><th></th></tr></thead><tbody id="tbody-adm-productos"></tbody></table></div></div>
         </div>
       </div>
@@ -556,6 +556,7 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
   <div class="modal" style="width:700px">
     <div class="flex-between mb-4"><div><div class="modal-title" id="import-title">Importar desde Excel</div><div style="font-size:11.5px;color:var(--text2);margin-top:2px" id="import-subtitle"></div></div><button class="btn btn-ghost btn-sm" onclick="closeModal('modal-import')">✕</button></div>
     <div style="background:var(--blue-bg);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--blue-text);display:flex;align-items:center;justify-content:space-between"><span>📋 Descargá la plantilla con el formato correcto</span><button class="btn btn-sm" style="background:var(--blue-text);color:#fff" onclick="downloadTemplate()">⬇ Plantilla</button></div>
+    <div id="import-mode-box" style="display:none;margin-bottom:12px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px"></div>
     <div class="import-drop" id="import-drop" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="handleDrop(event)" onclick="document.getElementById('import-file').click()">
       <div style="font-size:28px;margin-bottom:8px">📂</div><div style="font-weight:700;color:var(--navy);margin-bottom:4px">Arrastrá tu archivo Excel aquí</div><div style="font-size:11.5px;color:var(--text2)">o hacé clic para seleccionar (.xlsx, .xls)</div>
       <input type="file" id="import-file" accept=".xlsx,.xls" style="display:none" onchange="handleFile(this.files[0])">
@@ -1839,6 +1840,22 @@ function openImportModal(type){
   importType=type; importParsedData=[]; importErrors=[];
   document.getElementById("import-title").textContent="Importar "+type+" desde Excel";
   document.getElementById("import-subtitle").textContent=type==="clientes"?"Campos: nombre, codigo, canal, departamento, direccion, distribuidor, dto_fijo":type==="usuarios"?"Campos: nombre, apellido, email, password, rol, status":"Campos: linea, marca, nombre, codigo, presentacion, precio, unidad";
+  const modeBox=document.getElementById("import-mode-box");
+  const lbl=s=>`display:block;font-size:12px;margin:4px 0;cursor:pointer;${s||""}`;
+  if(type==="productos"){
+    modeBox.style.display="block";
+    modeBox.innerHTML=`<div style="font-size:12px;font-weight:800;margin-bottom:6px;color:var(--navy)">Modo de importación</div>
+      <label style="${lbl()}"><input type="radio" name="import-mode" value="reemplazar" checked> 🔁 <strong>Reemplazo total del catálogo</strong> — actualiza por código los existentes, agrega los nuevos y <strong style="color:var(--accent)">elimina</strong> los productos que no estén en el archivo</label>
+      <label style="${lbl()}"><input type="radio" name="import-mode" value="actualizar"> 💲 <strong>Actualizar lista de precios</strong> — actualiza precios/datos por código y agrega los nuevos (no borra nada)</label>
+      <label style="${lbl()}"><input type="radio" name="import-mode" value="solo_nuevos"> ➕ <strong>Agregar solo nuevos</strong> — ignora los códigos que ya existen</label>`;
+  } else if(type==="clientes"){
+    modeBox.style.display="block";
+    modeBox.innerHTML=`<div style="font-size:12px;font-weight:800;margin-bottom:6px;color:var(--navy)">Modo de importación</div>
+      <label style="${lbl()}"><input type="radio" name="import-mode" value="solo_nuevos" checked> ➕ <strong>Agregar solo nuevos</strong> — ignora los códigos que ya existen</label>
+      <label style="${lbl()}"><input type="radio" name="import-mode" value="actualizar"> 🔄 <strong>Actualizar clientes</strong> — actualiza por código los existentes y agrega los nuevos (no borra nada)</label>`;
+  } else {
+    modeBox.style.display="none"; modeBox.innerHTML="";
+  }
   document.getElementById("import-feedback").innerHTML="";
   document.getElementById("import-preview").style.display="none";
   document.getElementById("import-summary").style.display="none";
@@ -1869,7 +1886,7 @@ function validateAndPreviewImport(data){
 }
 async function confirmImport(){
   const CHUNK=500;
-  let count=0, skipped=0, dupes=0; const failed=[];
+  let count=0, skipped=0, dupes=0, updated=0, deleted=0; const failed=[];
   setLoading("Procesando datos...");
   try {
     if(DEMO_MODE){
@@ -1884,30 +1901,68 @@ async function confirmImport(){
       else if(importType==="productos"){ table="products"; rows=importParsedData.filter(r=>r.nombre&&r.codigo).map(r=>({linea:r.linea||"FORTYLEX",marca:r.marca||"",nombre:r.nombre,codigo:String(r.codigo),presentacion:r.presentacion||"",precio:Number(r.precio)||0,unidad:r.unidad||""})); }
       else if(importType==="usuarios"){ table="users"; rows=importParsedData.filter(r=>r.email&&r.nombre).map(r=>({nombre:r.nombre,apellido:r.apellido||"",email:r.email,password:String(r.password||"123456"),role:r.rol||"vendedor",status:r.status||"active",first_login:false})); }
       skipped=importParsedData.length-rows.length;
-      // Omitir filas que YA existen en la base (por código o email) para poder
-      // re-importar la planilla completa sin generar duplicados.
-      if(importType==="clientes"){ const ex=new Set(CLIENTS.map(c=>String(c.codigo||"").trim().toLowerCase())); const before=rows.length; rows=rows.filter(r=>!ex.has(String(r.codigo||"").trim().toLowerCase())); dupes=before-rows.length; }
-      else if(importType==="productos"){ const ex=new Set(PRODUCTS.map(p=>String(p.codigo||"").trim().toLowerCase())); const before=rows.length; rows=rows.filter(r=>!ex.has(String(r.codigo||"").trim().toLowerCase())); dupes=before-rows.length; }
-      else if(importType==="usuarios"){ const ex=new Set(USERS.map(u=>String(u.email||"").trim().toLowerCase())); const before=rows.length; rows=rows.filter(r=>!ex.has(String(r.email||"").trim().toLowerCase())); dupes=before-rows.length; }
-      for(let i=0;i<rows.length;i+=CHUNK){
-        const chunk=rows.slice(i,i+CHUNK);
-        setLoading(`Insertando ${i+1}–${Math.min(i+CHUNK,rows.length)} de ${rows.length}...`);
+      const mode=document.querySelector('input[name="import-mode"]:checked')?.value||"solo_nuevos";
+      const norm=v=>String(v||"").trim().toLowerCase();
+      // Índice de existentes por clave (código o email)
+      let existingMap, keyFn;
+      if(importType==="clientes"){ existingMap=new Map(CLIENTS.map(c=>[norm(c.codigo),c])); keyFn=r=>norm(r.codigo); }
+      else if(importType==="productos"){ existingMap=new Map(PRODUCTS.map(p=>[norm(p.codigo),p])); keyFn=r=>norm(r.codigo); }
+      else { existingMap=new Map(USERS.map(u=>[norm(u.email),u])); keyFn=r=>norm(r.email); }
+      // Clasificar filas del archivo: nuevas / a actualizar / omitidas
+      const toInsert=[], toUpdate=[]; const fileKeys=new Set();
+      for(const r of rows){
+        const k=keyFn(r);
+        if(!k || fileKeys.has(k)){ dupes++; continue; } // clave vacía o repetida dentro del archivo
+        fileKeys.add(k);
+        const ex=existingMap.get(k);
+        if(!ex){ toInsert.push(r); }
+        else if(mode==="solo_nuevos" || importType==="usuarios"){ dupes++; }
+        else { const upRow={...r}; if(importType==="clientes") delete upRow.supervisor_id; /* no pisar el supervisor asignado */ toUpdate.push({id:ex.id,row:upRow}); }
+      }
+      // Modo reemplazo (solo productos): eliminar los que NO están en el archivo
+      let toDelete=[];
+      if(importType==="productos" && mode==="reemplazar"){
+        toDelete=PRODUCTS.filter(p=>!fileKeys.has(norm(p.codigo)));
+        if(toDelete.length){
+          hideLoading();
+          const okDel=await confirmDialog(`El archivo no incluye ${toDelete.length} producto(s) que hoy están en el catálogo. ¿Confirmás ELIMINARLOS? Los pedidos ya guardados no se modifican.`,{title:"Reemplazo total del catálogo",okText:`Eliminar ${toDelete.length}`,danger:true});
+          if(!okDel) toDelete=[];
+          setLoading("Procesando datos...");
+        }
+      }
+      // 1) Insertar nuevos (en lotes; si un lote falla, fila por fila para no abortar)
+      for(let i=0;i<toInsert.length;i+=CHUNK){
+        const chunk=toInsert.slice(i,i+CHUNK);
+        setLoading(`Insertando nuevos ${i+1}–${Math.min(i+CHUNK,toInsert.length)} de ${toInsert.length}...`);
         const r=await db.from(table).insert(chunk);
         if(r.error){
-          // Si el lote falla, insertamos fila por fila para NO perder el resto
-          // (antes se abortaba todo y quedaban cargados solo los primeros lotes).
           for(const row of chunk){
-            setLoading(`Reintentando fila por fila (${count+failed.length+1} de ${rows.length})...`);
             const r2=await db.from(table).insert(row);
             if(r2.error) failed.push({fila:row, error:r2.error.message}); else count++;
           }
         } else count+=chunk.length;
       }
+      // 2) Actualizar existentes por código
+      for(let i=0;i<toUpdate.length;i++){
+        if(i%20===0) setLoading(`Actualizando ${i+1} de ${toUpdate.length}...`);
+        const u=toUpdate[i];
+        const r=await db.from(table).update(u.row).eq("id",u.id);
+        if(r.error) failed.push({fila:u.row, error:r.error.message}); else updated++;
+      }
+      // 3) Eliminar los que no vinieron (solo reemplazo total de productos)
+      for(let i=0;i<toDelete.length;i++){
+        if(i%20===0) setLoading(`Eliminando ${i+1} de ${toDelete.length}...`);
+        const p=toDelete[i];
+        const r=await db.from(table).delete().eq("id",p.id);
+        if(r.error) failed.push({fila:{codigo:p.codigo,nombre:p.nombre}, error:"No se pudo eliminar: "+r.error.message}); else deleted++;
+      }
     }
-    let msg=`Importación finalizada: ${count} registros cargados`;
-    if(dupes) msg+=`, ${dupes} omitidos porque ya existían`;
+    let msg=`Importación finalizada: ${count} nuevos`;
+    if(updated) msg+=`, ${updated} actualizados`;
+    if(deleted) msg+=`, ${deleted} eliminados`;
+    if(dupes) msg+=`, ${dupes} omitidos (ya existían o estaban repetidos en el archivo)`;
     if(skipped) msg+=`, ${skipped} omitidos por faltar datos`;
-    if(failed.length){ msg+=`. ⚠ ${failed.length} filas NO se pudieron cargar (ej.: ${failed[0].error}). Ver detalle en la consola (F12).`; console.error("Filas no importadas:",failed); }
+    if(failed.length){ msg+=`. ⚠ ${failed.length} filas fallaron (ej.: ${failed[0].error}). Ver detalle en la consola (F12).`; console.error("Filas con error:",failed); }
     toast(msg, failed.length?"error":"success", 9000);
     closeModal('modal-import'); await loadAllData(); nav(importType==="clientes"?'clientes':'admin');
   } catch(e){ toast("Error durante la inserción: "+e.message,"error",8000); console.error(e); }
@@ -1923,6 +1978,25 @@ function downloadTemplate(){
   XLSX.writeFile(wb,`plantilla_${importType}.xlsx`);
 }
 function pedidoLineasTexto(p){ return [...new Set((p.lineas||[]).map(l=>l.linea).filter(Boolean))].join(", "); }
+// ── Exportar bases a Excel (mismas columnas que la plantilla de importación,
+//    así el archivo exportado se puede editar y volver a subir para actualizar) ──
+function exportarClientesExcel(){
+  if(!CLIENTS.length){ toast("No hay clientes para exportar.","info"); return; }
+  const rows=CLIENTS.slice().sort((a,b)=>String(a.nombre||"").localeCompare(String(b.nombre||""),"es")).map(c=>{
+    const sup=USERS.find(u=>u.id===(c.supervisorId||c.supervisor_id));
+    return {nombre:c.nombre||"",codigo:c.codigo||"",canal:c.canal||"",departamento:c.departamento||"",direccion:c.direccion||"",distribuidor:c.distribuidor||"",dto_fijo:Number(c.dto)||0,supervisor:sup?userName(sup):""};
+  });
+  const ws=XLSX.utils.json_to_sheet(rows); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Clientes");
+  XLSX.writeFile(wb,`Clientes_${new Date().toISOString().slice(0,10)}.xlsx`);
+  toast(`Se exportaron ${rows.length} clientes.`,"success");
+}
+function exportarProductosExcel(){
+  if(!PRODUCTS.length){ toast("No hay productos para exportar.","info"); return; }
+  const rows=PRODUCTS.slice().sort((a,b)=>String(a.linea||"").localeCompare(String(b.linea||""),"es")||String(a.nombre||"").localeCompare(String(b.nombre||""),"es")).map(p=>({linea:p.linea||"",marca:p.marca||"",nombre:p.nombre||"",codigo:p.codigo||"",presentacion:p.presentacion||"",precio:Number(p.precio)||0,unidad:p.unidad||""}));
+  const ws=XLSX.utils.json_to_sheet(rows); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Productos");
+  XLSX.writeFile(wb,`Productos_${new Date().toISOString().slice(0,10)}.xlsx`);
+  toast(`Se exportaron ${rows.length} productos. Editá precios o datos y volvé a importarlo para actualizar.`,"success",6000);
+}
 function exportarExcel(){
   const visible=getVisiblePedidos();
   const rows=visible.map(p=>({"ID Pedido":p.id,"Fecha":p.fecha,"Vendedor/Supervisor":p.userName,"Cliente":p.clienteNombre,"Distribuidor":p.distribuidor,"Departamento":p.departamento,"Líneas":pedidoLineasTexto(p),"Items":p.lineas?.length||0,"Total Solicitado ($)":p.total,"Monto Facturado ($)":p.montofacturado||0,"Diferencia ($)":p.montofacturado!=null?(p.total-p.montofacturado):0,"Estado":p.estado,"Notas":p.notas}));

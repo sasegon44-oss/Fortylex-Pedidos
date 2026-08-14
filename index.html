@@ -433,7 +433,7 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
           <button class="btn btn-ghost btn-sm" id="adm-tab-productos" onclick="admTab('productos')">Productos</button>
         </div>
         <div id="adm-clientes">
-          <div class="flex-between mb-4"><input type="text" placeholder="Buscar..." id="adm-cli-search" style="width:200px" oninput="renderAdmClientes()"><div class="flex"><button class="btn btn-ghost btn-sm" onclick="exportarClientesExcel()">⬇ Exportar Excel</button><button class="btn btn-ghost btn-sm" onclick="openImportModal('clientes')">⬆ Importar Excel</button><button class="btn btn-primary btn-sm" onclick="openClienteModal()">+ Nuevo cliente</button></div></div>
+          <div class="flex-between mb-4"><input type="text" placeholder="Buscar..." id="adm-cli-search" style="width:200px" oninput="renderAdmClientes()"><div class="flex"><button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="borrarTodoBase('clientes')" title="Elimina toda la base de clientes y abre el importador">🗑 Eliminar todo y recargar</button><button class="btn btn-ghost btn-sm" onclick="exportarClientesExcel()">⬇ Exportar Excel</button><button class="btn btn-ghost btn-sm" onclick="openImportModal('clientes')">⬆ Importar Excel</button><button class="btn btn-primary btn-sm" onclick="openClienteModal()">+ Nuevo cliente</button></div></div>
           <div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Código</th><th>Canal</th><th>Departamento</th><th>Supervisor</th><th>Distribuidor</th><th>Dto. Fijo%</th><th></th></tr></thead><tbody id="tbody-adm-clientes"></tbody></table></div></div>
         </div>
         <div id="adm-usuarios" style="display:none">
@@ -441,7 +441,7 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
           <div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Reporta a</th><th>Estado</th><th></th></tr></thead><tbody id="tbody-adm-usuarios"></tbody></table></div></div>
         </div>
         <div id="adm-productos" style="display:none">
-          <div class="flex-between mb-4"><span style="font-size:12px;color:var(--text2)">Catálogo de productos</span><div class="flex"><button class="btn btn-ghost btn-sm" onclick="exportarProductosExcel()">⬇ Exportar Excel</button><button class="btn btn-ghost btn-sm" onclick="openImportModal('productos')">⬆ Importar / Actualizar Excel</button><button class="btn btn-primary btn-sm" onclick="openProductoModal()">+ Nuevo producto</button></div></div>
+          <div class="flex-between mb-4"><span style="font-size:12px;color:var(--text2)">Catálogo de productos</span><div class="flex"><button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="borrarTodoBase('productos')" title="Elimina todo el catálogo y abre el importador">🗑 Eliminar todo y recargar</button><button class="btn btn-ghost btn-sm" onclick="exportarProductosExcel()">⬇ Exportar Excel</button><button class="btn btn-ghost btn-sm" onclick="openImportModal('productos')">⬆ Importar / Actualizar Excel</button><button class="btn btn-primary btn-sm" onclick="openProductoModal()">+ Nuevo producto</button></div></div>
           <div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table><thead><tr><th>Línea</th><th>Marca</th><th>Producto</th><th>Código</th><th>Presentación</th><th>Unidad de venta</th><th>Precio</th><th></th></tr></thead><tbody id="tbody-adm-productos"></tbody></table></div></div>
         </div>
       </div>
@@ -1836,6 +1836,32 @@ async function deleteProducto(id){
   hideLoading();
 }
 
+// ── Eliminar TODA la base (clientes o productos) y volver a cargarla desde Excel ──
+async function borrarTodoBase(type){
+  const nombre=type==="clientes"?"clientes":"productos";
+  const cant=type==="clientes"?CLIENTS.length:PRODUCTS.length;
+  if(!cant){ toast(`No hay ${nombre} cargados. Abro el importador para que subas el Excel.`,"info",5000); openImportModal(type); return; }
+  const ok1=await confirmDialog(`Vas a eliminar TODOS los ${nombre} (${cant} registros) para volver a cargarlos desde un Excel. Los pedidos ya guardados no se modifican. ¿Continuar?`,{title:`Eliminar todos los ${nombre}`,okText:"Sí, continuar",danger:true});
+  if(!ok1) return;
+  const ok2=await confirmDialog(`Última confirmación: se van a borrar ${cant} ${nombre} de forma definitiva y después vas a poder subir la planilla nueva.`,{title:"¿Estás seguro?",okText:`Eliminar ${cant}`,danger:true});
+  if(!ok2) return;
+  setLoading(`Eliminando ${nombre}...`);
+  try{
+    if(DEMO_MODE){ if(type==="clientes") CLIENTS=[]; else PRODUCTS=[]; }
+    else{
+      const table=type==="clientes"?"clients":"products";
+      const r=await db.from(table).delete().not("id","is",null);
+      if(r.error) throw r.error;
+    }
+    await loadAllData();
+    hideLoading();
+    toast(`Se eliminaron todos los ${nombre}. Ahora subí el Excel con la base nueva.`,"success",7000);
+    openImportModal(type);
+  }catch(e){
+    hideLoading();
+    toast(`No se pudo eliminar todo: ${e.message||e}. Si hay registros vinculados a pedidos, usá el modo "Reemplazo total" del importador.`,"error",9000);
+  }
+}
 function openImportModal(type){
   importType=type; importParsedData=[]; importErrors=[];
   document.getElementById("import-title").textContent="Importar "+type+" desde Excel";
@@ -1852,7 +1878,8 @@ function openImportModal(type){
     modeBox.style.display="block";
     modeBox.innerHTML=`<div style="font-size:12px;font-weight:800;margin-bottom:6px;color:var(--navy)">Modo de importación</div>
       <label style="${lbl()}"><input type="radio" name="import-mode" value="solo_nuevos" checked> ➕ <strong>Agregar solo nuevos</strong> — ignora los códigos que ya existen</label>
-      <label style="${lbl()}"><input type="radio" name="import-mode" value="actualizar"> 🔄 <strong>Actualizar clientes</strong> — actualiza por código los existentes y agrega los nuevos (no borra nada)</label>`;
+      <label style="${lbl()}"><input type="radio" name="import-mode" value="actualizar"> 🔄 <strong>Actualizar clientes</strong> — actualiza por código los existentes y agrega los nuevos (no borra nada)</label>
+      <label style="${lbl()}"><input type="radio" name="import-mode" value="reemplazar"> 🔁 <strong>Reemplazo total de la base</strong> — actualiza por código, agrega los nuevos y <strong style="color:var(--accent)">elimina</strong> los clientes que no estén en el archivo</label>`;
   } else {
     modeBox.style.display="none"; modeBox.innerHTML="";
   }
@@ -1919,13 +1946,15 @@ async function confirmImport(){
         else if(mode==="solo_nuevos" || importType==="usuarios"){ dupes++; }
         else { const upRow={...r}; if(importType==="clientes") delete upRow.supervisor_id; /* no pisar el supervisor asignado */ toUpdate.push({id:ex.id,row:upRow}); }
       }
-      // Modo reemplazo (solo productos): eliminar los que NO están en el archivo
+      // Modo reemplazo: eliminar los registros que NO están en el archivo
       let toDelete=[];
-      if(importType==="productos" && mode==="reemplazar"){
-        toDelete=PRODUCTS.filter(p=>!fileKeys.has(norm(p.codigo)));
+      if(mode==="reemplazar" && (importType==="productos"||importType==="clientes")){
+        const base=importType==="productos"?PRODUCTS:CLIENTS;
+        toDelete=base.filter(x=>!fileKeys.has(norm(x.codigo)));
         if(toDelete.length){
           hideLoading();
-          const okDel=await confirmDialog(`El archivo no incluye ${toDelete.length} producto(s) que hoy están en el catálogo. ¿Confirmás ELIMINARLOS? Los pedidos ya guardados no se modifican.`,{title:"Reemplazo total del catálogo",okText:`Eliminar ${toDelete.length}`,danger:true});
+          const que=importType==="productos"?"producto(s)":"cliente(s)";
+          const okDel=await confirmDialog(`El archivo no incluye ${toDelete.length} ${que} que hoy están en la base. ¿Confirmás ELIMINARLOS? Los pedidos ya guardados no se modifican.`,{title:"Reemplazo total",okText:`Eliminar ${toDelete.length}`,danger:true});
           if(!okDel) toDelete=[];
           setLoading("Procesando datos...");
         }
@@ -1949,7 +1978,7 @@ async function confirmImport(){
         const r=await db.from(table).update(u.row).eq("id",u.id);
         if(r.error) failed.push({fila:u.row, error:r.error.message}); else updated++;
       }
-      // 3) Eliminar los que no vinieron (solo reemplazo total de productos)
+      // 3) Eliminar los que no vinieron (modo reemplazo total)
       for(let i=0;i<toDelete.length;i++){
         if(i%20===0) setLoading(`Eliminando ${i+1} de ${toDelete.length}...`);
         const p=toDelete[i];

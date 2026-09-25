@@ -400,7 +400,7 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
           <div class="flex"><button class="btn btn-ghost btn-sm" onclick="exportarClientesExcel()">⬇ Exportar Excel</button><button class="btn btn-ghost btn-sm admin-only" onclick="openImportModal('clientes')">⬆ Importar Excel</button><button class="btn btn-primary admin-only" onclick="openClienteModal()">+ Nuevo cliente</button></div>
         </div>
         <div class="card" style="padding:0;overflow:hidden"><div class="table-wrap">
-          <table><thead><tr><th>Nombre</th><th>Código</th><th>Canal</th><th>Departamento</th><th>Dirección</th><th>Supervisor</th><th>Distribuidor</th><th>Dto. Fijo%</th><th>Pedidos</th><th></th></tr></thead><tbody id="tbody-clientes"></tbody></table>
+          <table><thead><tr><th>Nombre</th><th>Razón social</th><th>Código</th><th>Canal</th><th>Departamento</th><th>Dirección</th><th>Supervisor</th><th>Distribuidor</th><th>Dto. Fijo%</th><th>Pedidos</th><th></th></tr></thead><tbody id="tbody-clientes"></tbody></table>
         </div></div>
         <div id="clientes-pager" class="pager"></div>
       </div>
@@ -434,7 +434,7 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
         </div>
         <div id="adm-clientes">
           <div class="flex-between mb-4"><input type="text" placeholder="Buscar..." id="adm-cli-search" style="width:200px" oninput="renderAdmClientes()"><div class="flex"><button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="borrarTodoBase('clientes')" title="Elimina toda la base de clientes y abre el importador">🗑 Eliminar todo y recargar</button><button class="btn btn-ghost btn-sm" onclick="exportarClientesExcel()">⬇ Exportar Excel</button><button class="btn btn-ghost btn-sm" onclick="openImportModal('clientes')">⬆ Importar Excel</button><button class="btn btn-primary btn-sm" onclick="openClienteModal()">+ Nuevo cliente</button></div></div>
-          <div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Código</th><th>Canal</th><th>Departamento</th><th>Supervisor</th><th>Distribuidor</th><th>Dto. Fijo%</th><th></th></tr></thead><tbody id="tbody-adm-clientes"></tbody></table></div></div>
+          <div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Razón social</th><th>Código</th><th>Canal</th><th>Departamento</th><th>Supervisor</th><th>Distribuidor</th><th>Dto. Fijo%</th><th></th></tr></thead><tbody id="tbody-adm-clientes"></tbody></table></div></div>
         </div>
         <div id="adm-usuarios" style="display:none">
           <div class="flex-between mb-4"><span style="font-size:12px;color:var(--text2)">Supervisores y vendedores del sistema</span><div class="flex"><button class="btn btn-ghost btn-sm" onclick="openImportModal('usuarios')">⬆ Importar Excel</button><button class="btn btn-primary btn-sm" onclick="openUserModal()">+ Nuevo usuario</button></div></div>
@@ -459,12 +459,13 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
       <div class="form-group" style="margin:0"><label class="form-label">Cliente <span class="required-star">*</span></label><div class="ss-wrap" id="ss-p-cliente"></div></div>
       <div class="form-group" style="margin:0"><label class="form-label">Departamento</label><input type="text" id="p-depto" list="deptos-datalist" placeholder="Departamento" autocomplete="off"><datalist id="deptos-datalist"></datalist></div>
     </div>
+    <div id="p-cliente-variantes" style="display:none;margin-bottom:10px;padding:10px 12px;border-radius:var(--r);background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.6);font-size:13px"></div>
     <input type="hidden" id="p-distribuidor">
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr 2fr;gap:10px;margin-bottom:16px">
       <div class="form-group" style="margin:0"><label class="form-label">Fecha</label><input type="date" id="p-fecha"></div>
       <div class="form-group" style="margin:0"><label class="form-label">Dto. fijo %</label><input type="number" id="p-dto-fijo" value="0" min="0" max="100" oninput="onDtoFijoChange()"></div>
       <div class="form-group" style="margin:0"><label class="form-label">Dto. extra general %</label><input type="number" id="p-dto-extra" value="0" min="0" max="100" oninput="renderLineas()"></div>
-      <div class="form-group" style="margin:0"><label class="form-label">Razón social (manual)</label><input type="text" id="p-razon-social" placeholder="Escribí la razón social"></div>
+      <div class="form-group" style="margin:0"><label class="form-label">Razón social</label><input type="text" id="p-razon-social" placeholder="Se completa al elegir el cliente"></div>
     </div>
     <div style="border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:12px"><div style="overflow-x:auto">
       <table class="pedido-table" style="min-width:1180px"><thead><tr>
@@ -522,6 +523,7 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
     <div class="flex-between mb-4"><div class="modal-title" id="modal-cliente-title">Nuevo cliente</div><button class="btn btn-ghost btn-sm" onclick="closeModal('modal-cliente')">✕</button></div>
     <div class="grid-2"><div class="form-group"><label class="form-label">Nombre <span class="required-star">*</span></label><input type="text" id="cli-nombre"></div><div class="form-group"><label class="form-label">Código <span class="required-star">*</span></label><input type="text" id="cli-codigo"></div></div>
     <div class="grid-2"><div class="form-group"><label class="form-label">Canal</label><select id="cli-canal"><option>Supermercado</option><option>Almacén</option><option>Kiosco</option><option>Gastronomía</option><option>Farmacia</option></select></div><div class="form-group"><label class="form-label">Departamento <span class="required-star">*</span></label><select id="cli-depto"></select></div></div>
+    <div class="form-group"><label class="form-label">Razón social</label><input type="text" id="cli-razon-social" placeholder="Ej: Distribuidora Los Pinos S.A."></div>
     <div class="form-group"><label class="form-label">Dirección</label><input type="text" id="cli-dir"></div>
     <div class="grid-2"><div class="form-group"><label class="form-label">Supervisor asignado</label><div class="ss-wrap" id="ss-cli-sup"></div></div><div class="form-group"><label class="form-label">Distribuidor</label><input type="text" id="cli-distribuidor" placeholder="Nombre del distribuidor"></div></div>
     <div class="form-group"><label class="form-label">Descuento fijo %</label><input type="number" id="cli-dto" value="0" min="0" max="100"></div>
@@ -755,7 +757,7 @@ async function loadAllData(){
   if(DEMO_MODE){ loadDemoData(); return; }
   if(!_initialLoad){
     if(document.getElementById("screen-pedidos")?.classList.contains("active")) skeletonRows(document.getElementById("tbody-pedidos"),13);
-    if(document.getElementById("screen-clientes")?.classList.contains("active")) skeletonRows(document.getElementById("tbody-clientes"),10);
+    if(document.getElementById("screen-clientes")?.classList.contains("active")) skeletonRows(document.getElementById("tbody-clientes"),11);
   }
   setLoading("Cargando datos...");
   try {
@@ -801,11 +803,11 @@ async function dbToggleUserStatus(id, newStatus){ if(DEMO_MODE){const u=USERS.fi
 
 async function dbSaveClient(obj, id=null){
   if(DEMO_MODE){
-    if(id){ const i=CLIENTS.findIndex(c=>c.id===id); if(i>-1){CLIENTS[i]={...CLIENTS[i],nombre:obj.nombre,codigo:obj.codigo,direccion:obj.direccion||"",canal:obj.canal,departamento:obj.departamento,supervisorId:obj.supervisorId||null,supervisor_id:obj.supervisorId||null,distribuidor:obj.distribuidor||"",dto:Number(obj.dto)||0};} return CLIENTS[i]; }
-    const nc={id:Date.now(),nombre:obj.nombre,codigo:obj.codigo,direccion:obj.direccion||"",canal:obj.canal,departamento:obj.departamento,supervisorId:obj.supervisorId||null,supervisor_id:obj.supervisorId||null,distribuidor:obj.distribuidor||"",dto:Number(obj.dto)||0};
+    if(id){ const i=CLIENTS.findIndex(c=>c.id===id); if(i>-1){CLIENTS[i]={...CLIENTS[i],nombre:obj.nombre,codigo:obj.codigo,direccion:obj.direccion||"",canal:obj.canal,departamento:obj.departamento,supervisorId:obj.supervisorId||null,supervisor_id:obj.supervisorId||null,distribuidor:obj.distribuidor||"",dto:Number(obj.dto)||0,razon_social:obj.razonSocial||""};} return CLIENTS[i]; }
+    const nc={id:Date.now(),nombre:obj.nombre,codigo:obj.codigo,direccion:obj.direccion||"",canal:obj.canal,departamento:obj.departamento,supervisorId:obj.supervisorId||null,supervisor_id:obj.supervisorId||null,distribuidor:obj.distribuidor||"",dto:Number(obj.dto)||0,razon_social:obj.razonSocial||""};
     CLIENTS.push(nc); return nc;
   }
-  const row={nombre:obj.nombre,codigo:obj.codigo,direccion:obj.direccion||"",canal:obj.canal,departamento:obj.departamento,supervisor_id:obj.supervisorId||null,distribuidor:obj.distribuidor||"",dto:Number(obj.dto)||0};
+  const row={nombre:obj.nombre,codigo:obj.codigo,direccion:obj.direccion||"",canal:obj.canal,departamento:obj.departamento,supervisor_id:obj.supervisorId||null,distribuidor:obj.distribuidor||"",dto:Number(obj.dto)||0,razon_social:obj.razonSocial||""};
   let res; if(id){ res=await db.from("clients").update(row).eq("id",id).select().single(); } else { res=await db.from("clients").insert(row).select().single(); }
   if(res.error) throw res.error; return res.data;
 }
@@ -1254,7 +1256,7 @@ function renderPedidos(){
     const canEdit=isAdmin()||isSup()||(p.userId===currentUser.id);
     const editAct=canEdit?`<button class="btn btn-ghost btn-sm" onclick="editPedido('${p.id}')">✏️</button>`:"";
     const delAct=(isAdmin()||(p.userId===currentUser.id&&p.estado==="Pendiente de corroboración"))?`<button class="btn btn-ghost btn-sm" onclick="deletePedido('${p.id}')">🗑</button>`:"";
-    return`<tr class="${i%2?"tr-alt":""}"><td><span class="mono" style="font-weight:700;color:var(--accent)">${p.id}</span></td><td>${p.fecha}</td><td>${p.userName}</td><td style="font-weight:600">${escHtml(p.clienteNombre)}</td><td style="color:var(--text2);font-size:12px">${escHtml(p.distribuidor||"-")}</td><td><span class="badge badge-blue">${p.departamento||"-"}</span></td><td style="max-width:120px">${pedidoLineasResumen(p)}</td><td style="text-align:center">${p.lineas?.length||0}</td><td style="font-weight:700;text-align:right">$${fmt(p.total)}</td><td style="text-align:right">${factHtml}</td><td style="text-align:right">${diffHtml}</td><td>${estadoBadge(p.estado)}</td><td><div class="flex">${verAct}${repAct}${editAct}${adminAct}${delAct}</div></td></tr>`;
+    return`<tr class="${i%2?"tr-alt":""}"><td><span class="mono" style="font-weight:700;color:var(--accent)">${p.id}</span></td><td>${p.fecha}</td><td>${p.userName}</td><td style="font-weight:600">${escHtml(p.clienteNombre)}${p.razonSocial?`<div style="font-size:11px;color:var(--text2);font-weight:400">${escHtml(p.razonSocial)}</div>`:""}</td><td style="color:var(--text2);font-size:12px">${escHtml(p.distribuidor||"-")}</td><td><span class="badge badge-blue">${p.departamento||"-"}</span></td><td style="max-width:120px">${pedidoLineasResumen(p)}</td><td style="text-align:center">${p.lineas?.length||0}</td><td style="font-weight:700;text-align:right">$${fmt(p.total)}</td><td style="text-align:right">${factHtml}</td><td style="text-align:right">${diffHtml}</td><td>${estadoBadge(p.estado)}</td><td><div class="flex">${verAct}${repAct}${editAct}${adminAct}${delAct}</div></td></tr>`;
   }).join("")||`<tr><td colspan="13" style="text-align:center;padding:36px;color:var(--text2)">No hay pedidos que coincidan.</td></tr>`;
   renderPager("pedidos-pager", pedidosPage, filtered.length, totalPages, "pedidosGoPage");
 }
@@ -1344,7 +1346,7 @@ async function enviarPedidoEmail(id){
 function buildDistribuidorOptions(){ return [...new Set(CLIENTS.map(c=>c.distribuidor).filter(Boolean))].map(d=>({value:d,label:d})); }
 function clientesParaDistribuidor(distrib){
   const list = distrib ? CLIENTS.filter(c=>(c.distribuidor||"")===distrib) : CLIENTS;
-  return list.slice().sort((a,b)=>String(a.nombre||"").localeCompare(String(b.nombre||""),"es")).map(c=>({value:c.id,label:c.nombre+" ("+c.codigo+")"}));
+  return list.slice().sort((a,b)=>String(a.nombre||"").localeCompare(String(b.nombre||""),"es")).map(c=>({value:c.id,label:c.nombre+(c.razon_social?" — "+c.razon_social:"")+" ("+c.codigo+")"}));
 }
 function onDistribuidorChange(distrib){
   document.getElementById("p-distribuidor").value = distrib||"";
@@ -1365,12 +1367,44 @@ function openNuevoPedido(){
   onDistribuidorChange("");
   document.getElementById("modal-pedido").classList.add("open"); initColResizers();
 }
-function onClienteChange(val){
+// ── Clientes con el mismo nombre (distinto distribuidor / razón social) ──
+let clienteVarianteOk=true;
+function clienteVariantes(c){
+  if(!c) return [];
+  const n=String(c.nombre||"").trim().toLowerCase();
+  return CLIENTS.filter(x=>String(x.nombre||"").trim().toLowerCase()===n);
+}
+function renderClienteVariantes(c){
+  const box=document.getElementById("p-cliente-variantes"); if(!box) return;
+  const vars=clienteVariantes(c);
+  if(vars.length<2){ box.style.display="none"; box.innerHTML=""; clienteVarianteOk=true; return; }
+  const opts=vars.map(v=>`<option value="${v.id}" ${clienteVarianteOk&&v.id===c.id?"selected":""}>${escHtml(v.distribuidor||"Sin distribuidor")} — ${escHtml(v.razon_social||"Sin razón social")} (${escHtml(v.codigo||"")})</option>`).join("");
+  const placeholder=clienteVarianteOk?"":`<option value="" selected disabled>— Elegí distribuidor y razón social —</option>`;
+  const estado=clienteVarianteOk?`<span style="margin-left:8px;color:var(--green);font-weight:700">✓ Confirmado</span>`:"";
+  box.innerHTML=`<div style="font-weight:700;margin-bottom:6px">⚠ "${escHtml(c.nombre)}" está cargado ${vars.length} veces, con distintos distribuidores. Elegí cuál corresponde a este pedido:</div><select id="p-cliente-variante-sel" style="max-width:100%" onchange="elegirClienteVariante(this.value)">${placeholder}${opts}</select>${estado}`;
+  box.style.display="block";
+}
+function elegirClienteVariante(val){
+  const c=CLIENTS.find(x=>String(x.id)===String(val)); if(!c) return;
+  const distOpts=[{value:"",label:"Todos los distribuidores"},...buildDistribuidorOptions()];
+  if(c.distribuidor && !distOpts.some(o=>o.value===c.distribuidor)) distOpts.push({value:c.distribuidor,label:c.distribuidor});
+  ssCreate("ss-p-distribuidor",distOpts,c.distribuidor||"",v=>onDistribuidorChange(v),"Distribuidor...",false);
+  const opts=clientesParaDistribuidor(c.distribuidor||"");
+  if(!opts.some(o=>String(o.value)===String(c.id))) opts.unshift({value:c.id,label:c.nombre+(c.razon_social?" — "+c.razon_social:"")+" ("+c.codigo+")"});
+  ssCreate("ss-p-cliente",opts,c.id,v=>onClienteChange(v),"Seleccionar cliente...",false);
+  clienteVarianteOk=true;
+  onClienteChange(c.id,true);
+}
+function onClienteChange(val,desdeAviso){
   const clienteId=Number(val||ssGetValue("ss-p-cliente"));
   const c=CLIENTS.find(x=>x.id===clienteId);
+  // Si el usuario ya filtró por un distribuidor, la elección está hecha; si no, hay que confirmar en el aviso.
+  if(!desdeAviso) clienteVarianteOk = !!ssGetValue("ss-p-distribuidor");
+  renderClienteVariantes(c);
   document.getElementById("p-dto-fijo").value=c?c.dto:0;
   document.getElementById("p-depto").value=c?c.departamento:"";
   document.getElementById("p-distribuidor").value = c ? (c.distribuidor||"") : "";
+  document.getElementById("p-razon-social").value = c ? (c.razon_social||"") : "";
   renderLineas();
 }
 function onDtoFijoChange(){ recalcLineaTotales(); }
@@ -1382,7 +1416,7 @@ function editPedido(id){
   if(p.distribuidor && !distOpts.some(o=>o.value===p.distribuidor)) distOpts.push({value:p.distribuidor,label:p.distribuidor});
   ssCreate("ss-p-distribuidor",distOpts,p.distribuidor||"",v=>onDistribuidorChange(v),"Distribuidor...",false);
   const opts=clientesParaDistribuidor(p.distribuidor||"");
-  if(p.clienteId && !opts.some(o=>String(o.value)===String(p.clienteId))){ const c=CLIENTS.find(x=>x.id===p.clienteId); if(c) opts.unshift({value:c.id,label:c.nombre+" ("+c.codigo+")"}); }
+  if(p.clienteId && !opts.some(o=>String(o.value)===String(p.clienteId))){ const c=CLIENTS.find(x=>x.id===p.clienteId); if(c) opts.unshift({value:c.id,label:c.nombre+(c.razon_social?" — "+c.razon_social:"")+" ("+c.codigo+")"}); }
   ssCreate("ss-p-cliente",opts,p.clienteId,v=>onClienteChange(v),"Seleccionar cliente...",false);
   document.getElementById("p-distribuidor").value=p.distribuidor||"";
   document.getElementById("p-razon-social").value=p.razonSocial||"";
@@ -1390,6 +1424,7 @@ function editPedido(id){
   document.getElementById("p-dto-fijo").value=p.dtoFijo||0;
   document.getElementById("p-dto-extra").value=p.dtoExtra||0;
   document.getElementById("p-depto").value=p.departamento||"";
+  clienteVarianteOk=true; renderClienteVariantes(CLIENTS.find(x=>x.id===p.clienteId));
   renderLineas(); document.getElementById("modal-pedido").classList.add("open"); initColResizers();
 }
 // ── Repetir pedido: crea un pedido NUEVO copiando las líneas de otro. ──
@@ -1403,7 +1438,7 @@ function repetirPedido(id){
   if(p.distribuidor && !distOpts.some(o=>o.value===p.distribuidor)) distOpts.push({value:p.distribuidor,label:p.distribuidor});
   ssCreate("ss-p-distribuidor",distOpts,p.distribuidor||"",v=>onDistribuidorChange(v),"Distribuidor...",false);
   const opts=clientesParaDistribuidor(p.distribuidor||"");
-  if(p.clienteId && !opts.some(o=>String(o.value)===String(p.clienteId))){ const c=CLIENTS.find(x=>x.id===p.clienteId); if(c) opts.unshift({value:c.id,label:c.nombre+" ("+c.codigo+")"}); }
+  if(p.clienteId && !opts.some(o=>String(o.value)===String(p.clienteId))){ const c=CLIENTS.find(x=>x.id===p.clienteId); if(c) opts.unshift({value:c.id,label:c.nombre+(c.razon_social?" — "+c.razon_social:"")+" ("+c.codigo+")"}); }
   ssCreate("ss-p-cliente",opts,p.clienteId,v=>onClienteChange(v),"Seleccionar cliente...",false);
   document.getElementById("p-distribuidor").value=p.distribuidor||"";
   document.getElementById("p-razon-social").value=p.razonSocial||"";
@@ -1411,20 +1446,21 @@ function repetirPedido(id){
   document.getElementById("p-dto-fijo").value=p.dtoFijo||0;
   document.getElementById("p-dto-extra").value=p.dtoExtra||0;
   document.getElementById("p-depto").value=p.departamento||"";
+  clienteVarianteOk=true; renderClienteVariantes(CLIENTS.find(x=>x.id===p.clienteId));
   renderLineas(); document.getElementById("modal-pedido").classList.add("open"); initColResizers();
   toast("Se copiaron las líneas del pedido "+p.id+". Podés cambiar el cliente o guardarlo tal cual.","info",6000);
 }
 function addLinea(focusNew){ lineas.push({linea:"",productoId:"",nombre:"",codigo:"",marca:"",presentacion:"",precio:0,dtoFijo:0,dtoEsp:0,cantidad:1,unidad:"",obs:""}); renderLineas(); if(focusNew){ setTimeout(()=>openLineaSelect(lineas.length-1,'linea'),0); } }
 function removeLinea(idx){lineas.splice(idx,1); renderLineas();}
 function updateLineaField(idx,field,val){
-  if(field==="linea"){ lineas[idx].linea=val; lineas[idx].productoId=""; lineas[idx].nombre=""; lineas[idx].codigo=""; lineas[idx].marca=""; lineas[idx].presentacion=""; lineas[idx].precio=0; renderLineas(); return; }
+  if(field==="linea"){ lineas[idx].linea=val; lineas[idx].productoId=""; lineas[idx].nombre=""; lineas[idx].codigo=""; lineas[idx].marca=""; lineas[idx].presentacion=""; lineas[idx].precio=0; lineas[idx].unidad=""; renderLineas(); return; }
   else if(field==="productoId"){
     const prod=PRODUCTS.find(p=>String(p.id)===String(val));
     if(prod){
       // Aviso de producto duplicado (no bloquea, solo avisa)
       const dup=lineas.findIndex((l,j)=>j!==idx && String(l.productoId)===String(prod.id));
       if(dup!==-1){ toast(`⚠ "${prod.nombre}" ya está cargado en la línea ${dup+1}`,"info"); }
-      lineas[idx].productoId=prod.id; lineas[idx].nombre=prod.nombre; lineas[idx].codigo=prod.codigo; lineas[idx].marca=prod.marca; lineas[idx].presentacion=prod.presentacion; lineas[idx].precio=prod.precio; if(prod.unidad) lineas[idx].unidad=prod.unidad;
+      lineas[idx].productoId=prod.id; lineas[idx].nombre=prod.nombre; lineas[idx].codigo=prod.codigo; lineas[idx].marca=prod.marca; lineas[idx].presentacion=prod.presentacion; lineas[idx].precio=prod.precio; lineas[idx].unidad=prod.unidad||"";
     }
     renderLineas(); return;
   }
@@ -1498,7 +1534,7 @@ function renderLineas(){
   tbody.innerHTML=lineas.map((l,i)=>{
     const sub=l.precio*l.cantidad; const dE=Number(l.dtoEsp)||0;
     const tot=sub*(1-dE/100); sumLineas+=tot;
-    return`<tr><td class="col-num" style="font-weight:700;color:var(--text3)">${i+1}</td><td class="col-linea">${buildISSInput(i,'linea',l.linea)}</td><td class="col-marca"><input type="text" class="sm-inp readonly-field" readonly value="${escHtml(l.marca)}"></td><td class="col-prod">${buildISSInput(i,'productoId',l.nombre?`${l.nombre} (${l.codigo})`:'',!l.linea)}</td><td class="col-cod"><input type="text" class="sm-inp readonly-field mono" readonly value="${escHtml(l.codigo)}"></td><td class="col-pres"><input type="text" class="sm-inp readonly-field" readonly value="${escHtml(l.presentacion)}"></td><td class="col-precio"><input type="text" class="sm-inp readonly-field text-right mono" readonly value="$${fmt(l.precio)}"></td><td class="col-dtoesp"><input type="number" class="num-inp" value="${l.dtoEsp}" min="0" max="100" oninput="updateLineaField(${i},'dtoEsp',this.value)"></td><td class="col-cant"><input type="number" class="num-inp" value="${l.cantidad}" min="1" oninput="updateLineaField(${i},'cantidad',this.value)" onkeydown="lineaCantKeydown(event,${i})" onblur="normalizeCant(${i})"></td><td class="col-unidad"><input type="text" class="sm-inp" list="unidades-datalist" value="${escHtml(l.unidad||'')}" placeholder="Unid." onchange="updateLineaField(${i},'unidad',this.value)"></td><td class="col-subtotal mono" style="text-align:right;font-weight:600;padding-right:6px">$${fmt(sub)}</td><td class="col-total mono" style="text-align:right;font-weight:700;color:var(--green);padding-right:6px">$${fmt(tot)}</td><td class="col-obs"><input type="text" class="sm-inp" value="${escHtml(l.obs)}" placeholder="..." onchange="updateLineaField(${i},'obs',this.value)"></td><td class="col-del" style="text-align:center"><button class="btn btn-ghost btn-sm" style="color:var(--accent);padding:3px 6px" onclick="removeLinea(${i})">🗑</button></td></tr>`;
+    return`<tr><td class="col-num" style="font-weight:700;color:var(--text3)">${i+1}</td><td class="col-linea">${buildISSInput(i,'linea',l.linea)}</td><td class="col-marca"><input type="text" class="sm-inp readonly-field" readonly value="${escHtml(l.marca)}"></td><td class="col-prod">${buildISSInput(i,'productoId',l.nombre?`${l.nombre} (${l.codigo})`:'',!l.linea)}</td><td class="col-cod"><input type="text" class="sm-inp readonly-field mono" readonly value="${escHtml(l.codigo)}"></td><td class="col-pres"><input type="text" class="sm-inp readonly-field" readonly value="${escHtml(l.presentacion)}"></td><td class="col-precio"><input type="text" class="sm-inp readonly-field text-right mono" readonly value="$${fmt(l.precio)}"></td><td class="col-dtoesp"><input type="number" class="num-inp" value="${l.dtoEsp}" min="0" max="100" oninput="updateLineaField(${i},'dtoEsp',this.value)"></td><td class="col-cant"><input type="number" class="num-inp" value="${l.cantidad}" min="1" oninput="updateLineaField(${i},'cantidad',this.value)" onkeydown="lineaCantKeydown(event,${i})" onblur="normalizeCant(${i})"></td><td class="col-unidad"><input type="text" class="sm-inp" list="unidades-datalist" value="${escHtml(l.unidad||'')}" onchange="updateLineaField(${i},'unidad',this.value)"></td><td class="col-subtotal mono" style="text-align:right;font-weight:600;padding-right:6px">$${fmt(sub)}</td><td class="col-total mono" style="text-align:right;font-weight:700;color:var(--green);padding-right:6px">$${fmt(tot)}</td><td class="col-obs"><input type="text" class="sm-inp" value="${escHtml(l.obs)}" placeholder="..." onchange="updateLineaField(${i},'obs',this.value)"></td><td class="col-del" style="text-align:center"><button class="btn btn-ghost btn-sm" style="color:var(--accent);padding:3px 6px" onclick="removeLinea(${i})">🗑</button></td></tr>`;
   }).join("");
   if(!lineas.length) tbody.innerHTML=`<tr><td colspan="14" style="text-align:center;padding:24px;color:var(--text3);font-style:italic">No hay líneas en este pedido. Hacé clic en "Agregar línea".</td></tr>`;
   // Dto. fijo y dto. extra se aplican sobre el TOTAL del pedido, no por línea.
@@ -1508,6 +1544,7 @@ function renderLineas(){
 async function savePedido(){
   const clienteId=ssGetValue("ss-p-cliente");
   if(!clienteId){ toast("Debés seleccionar un cliente","error"); return; }
+  if(!clienteVarianteOk){ toast("Este cliente tiene más de un distribuidor. Elegí en el aviso cuál corresponde.","error"); document.getElementById("p-cliente-variante-sel")?.focus(); return; }
   if(!lineas.length){ toast("El pedido no tiene líneas","error"); return; }
   const invalid=lineas.findIndex(l=>!l.productoId);
   if(invalid!==-1){ toast(`Línea ${invalid+1}: debés seleccionar un producto`,"error"); return; }
@@ -1575,7 +1612,7 @@ function renderClientes(){
   const search=(document.getElementById("cli-search").value||"").toLowerCase();
   const depto=document.getElementById("cli-filter-depto").value;
   let list=CLIENTS;
-  if(search) list=list.filter(c=>c.nombre.toLowerCase().includes(search)||c.codigo.toLowerCase().includes(search));
+  if(search) list=list.filter(c=>c.nombre.toLowerCase().includes(search)||String(c.codigo||"").toLowerCase().includes(search)||String(c.razon_social||"").toLowerCase().includes(search));
   if(depto) list=list.filter(c=>c.departamento===depto);
   list=[...list].sort((a,b)=>a.nombre.localeCompare(b.nombre));
   const sig=JSON.stringify([search,depto,list.length]);
@@ -1588,8 +1625,8 @@ function renderClientes(){
     const sup=USERS.find(u=>u.id===c.supervisorId);
     const delAct=isAdmin()?`<button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="deleteCliente(${c.id})">🗑</button>`:"";
     const editAct=isAdmin()?`<button class="btn btn-ghost btn-sm" onclick="openClienteModal(${c.id})">✏️</button>`:"";
-    return`<tr class="${i%2?"tr-alt":""}"><td style="font-weight:700">${escHtml(c.nombre)}</td><td class="mono">${escHtml(c.codigo)}</td><td><span class="badge badge-purple">${c.canal}</span></td><td><span class="badge badge-blue">${c.departamento}</span></td><td style="color:var(--text2);font-size:12px">${escHtml(c.direccion||"—")}</td><td>${sup?userName(sup):"—"}</td><td>${escHtml(c.distribuidor||"—")}</td><td style="text-align:center;font-weight:600">${c.dto}%</td><td style="text-align:center"><span class="badge badge-crimson">${pCount}</span></td><td><div class="flex">${editAct}${delAct}</div></td></tr>`;
-  }).join("")||`<tr><td colspan="10" style="text-align:center;padding:36px;color:var(--text2)">No hay clientes que coincidan.</td></tr>`;
+    return`<tr class="${i%2?"tr-alt":""}"><td style="font-weight:700">${escHtml(c.nombre)}</td><td>${escHtml(c.razon_social||"")}</td><td class="mono">${escHtml(c.codigo)}</td><td><span class="badge badge-purple">${c.canal}</span></td><td><span class="badge badge-blue">${c.departamento}</span></td><td style="color:var(--text2);font-size:12px">${escHtml(c.direccion||"—")}</td><td>${sup?userName(sup):"—"}</td><td>${escHtml(c.distribuidor||"—")}</td><td style="text-align:center;font-weight:600">${c.dto}%</td><td style="text-align:center"><span class="badge badge-crimson">${pCount}</span></td><td><div class="flex">${editAct}${delAct}</div></td></tr>`;
+  }).join("")||`<tr><td colspan="11" style="text-align:center;padding:36px;color:var(--text2)">No hay clientes que coincidan.</td></tr>`;
   renderPager("clientes-pager", clientesPage, list.length, totalPages, "clientesGoPage");
 }
 function openClienteModal(id=null){
@@ -1600,14 +1637,14 @@ function openClienteModal(id=null){
     document.getElementById("modal-cliente-title").textContent="Editar cliente";
     document.getElementById("cli-nombre").value=c.nombre; document.getElementById("cli-codigo").value=c.codigo;
     document.getElementById("cli-canal").value=c.canal; document.getElementById("cli-depto").value=c.departamento;
-    document.getElementById("cli-dir").value=c.direccion||""; document.getElementById("cli-distribuidor").value=c.distribuidor||"";
+    document.getElementById("cli-dir").value=c.direccion||""; document.getElementById("cli-distribuidor").value=c.distribuidor||""; document.getElementById("cli-razon-social").value=c.razon_social||"";
     document.getElementById("cli-dto").value=c.dto||0;
     ssCreate("ss-cli-sup",sups,c.supervisorId||"",()=>{},"Asignar supervisor...",true);
   } else {
     document.getElementById("modal-cliente-title").textContent="Nuevo cliente";
     document.getElementById("cli-nombre").value=""; document.getElementById("cli-codigo").value="";
     document.getElementById("cli-canal").selectedIndex=0; document.getElementById("cli-depto").selectedIndex=0;
-    document.getElementById("cli-dir").value=""; document.getElementById("cli-distribuidor").value="";
+    document.getElementById("cli-dir").value=""; document.getElementById("cli-distribuidor").value=""; document.getElementById("cli-razon-social").value="";
     document.getElementById("cli-dto").value=0;
     ssCreate("ss-cli-sup",sups,"",()=>{},"Asignar supervisor...",true);
   }
@@ -1619,7 +1656,7 @@ async function saveCliente(){
   const canal=document.getElementById("cli-canal").value;
   const departamento=document.getElementById("cli-depto").value;
   if(!nombre||!codigo||!departamento){ toast("Por favor completá los campos obligatorios.","error"); return; }
-  const cObj={ nombre, codigo, canal, departamento, direccion:document.getElementById("cli-dir").value.trim(), distribuidor:document.getElementById("cli-distribuidor").value.trim(), dto:Number(document.getElementById("cli-dto").value)||0, supervisorId:ssGetValue("ss-cli-sup")?Number(ssGetValue("ss-cli-sup")):null };
+  const cObj={ nombre, codigo, canal, departamento, razonSocial:document.getElementById("cli-razon-social").value.trim(), direccion:document.getElementById("cli-dir").value.trim(), distribuidor:document.getElementById("cli-distribuidor").value.trim(), dto:Number(document.getElementById("cli-dto").value)||0, supervisorId:ssGetValue("ss-cli-sup")?Number(ssGetValue("ss-cli-sup")):null };
   setLoading("Guardando cliente...");
   try { await dbSaveClient(cObj, editingClienteId); toast("Cliente guardado","success"); closeModal('modal-cliente'); await loadAllData(); renderClientes(); if(document.getElementById("screen-admin").classList.contains("active")) renderAdmClientes(); }
   catch(e){ toast("Error: "+e.message,"error"); }
@@ -1698,7 +1735,7 @@ function renderMetaClienteDist(){
   const metaObj=METAS.find(m=>m.supId===supId&&m.mes===mes);
   const div=document.getElementById("meta-cliente-dist");
   if(!clis.length){div.innerHTML=`<div class="text-muted" style="padding:20px;text-align:center;font-style:italic">No hay clientes asociados. La meta se guardará como objetivo global mensual.</div>`;return;}
-  div.innerHTML=clis.map(c=>{const dist=metaObj?.distClientes?.find(d=>d.clienteId===c.id); const val=dist?dist.monto:""; return`<div class="flex-between" style="padding:6px 12px;border-bottom:1px solid var(--border)"><span style="font-weight:600">${escHtml(c.nombre)} <span class="mono text-small text-muted">(${c.codigo})</span></span><input type="number" class="num-inp meta-cli-input" data-cli-id="${c.id}" value="${val}" placeholder="0" style="width:120px" oninput="sumMetaDist()"></div>`;}).join("");
+  div.innerHTML=clis.map(c=>{const dist=metaObj?.distClientes?.find(d=>d.clienteId===c.id); const val=dist?dist.monto:""; return`<div class="flex-between" style="padding:6px 12px;border-bottom:1px solid var(--border)"><span style="font-weight:600">${escHtml(c.nombre)}${c.razon_social?` — ${escHtml(c.razon_social)}`:""} <span class="mono text-small text-muted">(${c.codigo})</span></span><input type="number" class="num-inp meta-cli-input" data-cli-id="${c.id}" value="${val}" placeholder="0" style="width:120px" oninput="sumMetaDist()"></div>`;}).join("");
   sumMetaDist();
 }
 function sumMetaDist(){ let sum=0; document.querySelectorAll(".meta-cli-input").forEach(i=>sum+=(Number(i.value)||0)); document.getElementById("meta-dist-sum").textContent="$"+fmt(sum); }
@@ -1718,7 +1755,7 @@ async function saveMeta(){
 
 function renderAlertas(){
   const clientMap={};
-  PEDIDOS.forEach(p=>{if(p.montofacturado==null)return; const key=p.clienteNombre; if(!clientMap[key])clientMap[key]={nombre:key,codigo:CLIENTS.find(c=>c.nombre===key)?.codigo||"-",pedido:0,facturado:0,pedidosCount:0}; clientMap[key].pedido+=(p.total||0); clientMap[key].facturado+=(p.montofacturado||0); clientMap[key].pedidosCount++;});
+  PEDIDOS.forEach(p=>{if(p.montofacturado==null)return; const cli=CLIENTS.find(c=>c.id===p.clienteId); const key=p.clienteId||p.clienteNombre; if(!clientMap[key])clientMap[key]={nombre:(p.clienteNombre||"-")+((cli?.razon_social||p.razonSocial)?" — "+(cli?.razon_social||p.razonSocial):""),codigo:cli?.codigo||"-",pedido:0,facturado:0,pedidosCount:0}; clientMap[key].pedido+=(p.total||0); clientMap[key].facturado+=(p.montofacturado||0); clientMap[key].pedidosCount++;});
   const rows=Object.values(clientMap).map(c=>({...c,diff:c.pedido-c.facturado,pct:c.pedido>0?Math.round(((c.pedido-c.facturado)/c.pedido)*100):0})).filter(c=>c.pct>10).sort((a,b)=>b.pct-a.pct).slice(0,5);
   document.getElementById("alertas-body").innerHTML=`<div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Código</th><th>Pedidos Validados</th><th>Total Pedido ($)</th><th>Total Facturado ($)</th><th>Diferencia Real ($)</th><th>Desviación %</th><th>Nivel de Riesgo Comercial</th></tr></thead><tbody>${rows.map((r,i)=>{const riesgo=r.pct>=30?"Crítico (Brecha Extrema)":r.pct>=20?"Alto (Desviación Alta)":"Moderado (Alerta)"; const rc=r.pct>=30?"badge-red":r.pct>=20?"badge-yellow":"badge-blue"; return`<tr class="${i%2?"tr-alt":""}"><td style="font-weight:700;font-size:13px">${r.nombre}</td><td class="mono">${r.codigo}</td><td style="text-align:center"><span class="badge badge-crimson">${r.pedidosCount}</span></td><td style="text-align:right;font-weight:600">$${fmt(r.pedido)}</td><td style="text-align:right;color:var(--green);font-weight:600">$${fmt(r.facturado)}</td><td class="diff-pos" style="text-align:right;font-weight:700">$${fmt(r.diff)}</td><td style="text-align:center;font-weight:900;color:var(--accent);font-size:13px">${r.pct}%</td><td><span class="badge ${rc}">${riesgo}</span></td></tr>`;}).join("")||`<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text2)">No hay clientes con desviación mayor al 10%.</td></tr>`}</tbody></table></div></div>`;
 }
@@ -1729,8 +1766,8 @@ function admTab(t){
 }
 function renderAdmClientes(){
   const q=(document.getElementById("adm-cli-search").value||"").toLowerCase();
-  const filtered=CLIENTS.filter(c=>c.nombre.toLowerCase().includes(q)||c.codigo.toLowerCase().includes(q));
-  document.getElementById("tbody-adm-clientes").innerHTML=filtered.map(c=>`<tr><td><strong>${escHtml(c.nombre)}</strong></td><td class="mono">${c.codigo}</td><td>${c.canal}</td><td>${c.departamento}</td><td>${USERS.find(u=>u.id===c.supervisorId)?.nombre||"—"}</td><td>${escHtml(c.distribuidor||"—")}</td><td style="text-align:center">${c.dto}%</td><td><div class="flex"><button class="btn btn-ghost btn-sm" onclick="openClienteModal(${c.id})">✏</button><button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="deleteCliente(${c.id})">🗑</button></div></td></tr>`).join("");
+  const filtered=CLIENTS.filter(c=>c.nombre.toLowerCase().includes(q)||String(c.codigo||"").toLowerCase().includes(q)||String(c.razon_social||"").toLowerCase().includes(q));
+  document.getElementById("tbody-adm-clientes").innerHTML=filtered.map(c=>`<tr><td><strong>${escHtml(c.nombre)}</strong></td><td>${escHtml(c.razon_social||"")}</td><td class="mono">${c.codigo}</td><td>${c.canal}</td><td>${c.departamento}</td><td>${USERS.find(u=>u.id===c.supervisorId)?.nombre||"—"}</td><td>${escHtml(c.distribuidor||"—")}</td><td style="text-align:center">${c.dto}%</td><td><div class="flex"><button class="btn btn-ghost btn-sm" onclick="openClienteModal(${c.id})">✏</button><button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="deleteCliente(${c.id})">🗑</button></div></td></tr>`).join("");
 }
 function renderAdmUsuarios(){
   document.getElementById("tbody-adm-usuarios").innerHTML=USERS.map(u=>{
@@ -1801,7 +1838,7 @@ async function deleteUser(id){
   hideLoading();
 }
 function renderAdmProductos(){
-  document.getElementById("tbody-adm-productos").innerHTML=PRODUCTS.map(p=>`<tr><td><span class="badge badge-crimson">${p.linea}</span></td><td>${escHtml(p.marca||"—")}</td><td><strong>${escHtml(p.nombre)}</strong></td><td class="mono">${p.codigo}</td><td>${escHtml(p.presentacion||"—")}</td><td>${escHtml(p.unidad||"—")}</td><td class="mono" style="font-weight:600">$${fmt(p.precio)}</td><td><div class="flex"><button class="btn btn-ghost btn-sm" onclick="openProductoModal(${p.id})">✏</button><button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="deleteProducto(${p.id})">🗑</button></div></td></tr>`).join("");
+  document.getElementById("tbody-adm-productos").innerHTML=PRODUCTS.map(p=>`<tr><td><span class="badge badge-crimson">${p.linea}</span></td><td>${escHtml(p.marca||"—")}</td><td><strong>${escHtml(p.nombre)}</strong></td><td class="mono">${p.codigo}</td><td>${escHtml(p.presentacion||"—")}</td><td>${escHtml(p.unidad||"")}</td><td class="mono" style="font-weight:600">$${fmt(p.precio)}</td><td><div class="flex"><button class="btn btn-ghost btn-sm" onclick="openProductoModal(${p.id})">✏</button><button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="deleteProducto(${p.id})">🗑</button></div></td></tr>`).join("");
 }
 function openProductoModal(id=null){
   editingProductoId=id;
@@ -1865,7 +1902,7 @@ async function borrarTodoBase(type){
 function openImportModal(type){
   importType=type; importParsedData=[]; importErrors=[];
   document.getElementById("import-title").textContent="Importar "+type+" desde Excel";
-  document.getElementById("import-subtitle").textContent=type==="clientes"?"Campos: nombre, codigo, canal, departamento, direccion, distribuidor, dto_fijo":type==="usuarios"?"Campos: nombre, apellido, email, password, rol, status":"Campos: linea, marca, nombre, codigo, presentacion, precio, unidad";
+  document.getElementById("import-subtitle").textContent=type==="clientes"?"Campos: nombre, razon_social, codigo, canal, departamento, direccion, distribuidor, dto_fijo":type==="usuarios"?"Campos: nombre, apellido, email, password, rol, status":"Campos: linea, marca, nombre, codigo, presentacion, precio, unidad";
   const modeBox=document.getElementById("import-mode-box");
   const lbl=s=>`display:block;font-size:12px;margin:4px 0;cursor:pointer;${s||""}`;
   if(type==="productos"){
@@ -1918,13 +1955,13 @@ async function confirmImport(){
   try {
     if(DEMO_MODE){
       for(let row of importParsedData){
-        if(importType==="clientes"){ if(!row.nombre||!row.codigo){skipped++;continue;} await dbSaveClient({nombre:row.nombre,codigo:String(row.codigo),canal:row.canal||"Almacén",departamento:row.departamento||"Montevideo",direccion:row.direccion||"",distribuidor:row.distribuidor||"",dto:Number(row.dto_fijo)||0,supervisorId:null}); count++; }
+        if(importType==="clientes"){ if(!row.nombre||!row.codigo){skipped++;continue;} await dbSaveClient({nombre:row.nombre,codigo:String(row.codigo),canal:row.canal||"Almacén",departamento:row.departamento||"Montevideo",direccion:row.direccion||"",distribuidor:row.distribuidor||"",dto:Number(row.dto_fijo)||0,supervisorId:null,razonSocial:row.razon_social||""}); count++; }
         else if(importType==="productos"){ if(!row.nombre||!row.codigo){skipped++;continue;} await dbSaveProduct({linea:row.linea||"FORTYLEX",marca:row.marca||"",nombre:row.nombre,codigo:String(row.codigo),presentacion:row.presentacion||"",precio:Number(row.precio)||0,unidad:row.unidad||""}); count++; }
         else if(importType==="usuarios"){ if(!row.email||!row.nombre){skipped++;continue;} await dbSaveUser({nombre:row.nombre,apellido:row.apellido||"",email:row.email,password:String(row.password||"123456"),role:row.rol||"vendedor",status:row.status||"active",firstLogin:false}); count++; }
       }
     } else {
       let rows=[], table="";
-      if(importType==="clientes"){ table="clients"; rows=importParsedData.filter(r=>r.nombre&&r.codigo).map(r=>({nombre:r.nombre,codigo:String(r.codigo),canal:r.canal||"Almacén",departamento:r.departamento||"Montevideo",direccion:r.direccion||"",supervisor_id:null,distribuidor:r.distribuidor||"",dto:Number(r.dto_fijo)||0})); }
+      if(importType==="clientes"){ table="clients"; rows=importParsedData.filter(r=>r.nombre&&r.codigo).map(r=>({nombre:r.nombre,codigo:String(r.codigo),canal:r.canal||"Almacén",departamento:r.departamento||"Montevideo",direccion:r.direccion||"",supervisor_id:null,distribuidor:r.distribuidor||"",dto:Number(r.dto_fijo)||0,...(r.razon_social!==undefined?{razon_social:String(r.razon_social||"").trim()}:{})})); }
       else if(importType==="productos"){ table="products"; rows=importParsedData.filter(r=>r.nombre&&r.codigo).map(r=>({linea:r.linea||"FORTYLEX",marca:r.marca||"",nombre:r.nombre,codigo:String(r.codigo),presentacion:r.presentacion||"",precio:Number(r.precio)||0,unidad:r.unidad||""})); }
       else if(importType==="usuarios"){ table="users"; rows=importParsedData.filter(r=>r.email&&r.nombre).map(r=>({nombre:r.nombre,apellido:r.apellido||"",email:r.email,password:String(r.password||"123456"),role:r.rol||"vendedor",status:r.status||"active",first_login:false})); }
       skipped=importParsedData.length-rows.length;
@@ -1999,7 +2036,7 @@ async function confirmImport(){
 }
 function downloadTemplate(){
   let cols=[];
-  if(importType==="clientes") cols=["nombre","codigo","canal","departamento","direccion","distribuidor","dto_fijo"];
+  if(importType==="clientes") cols=["nombre","razon_social","codigo","canal","departamento","direccion","distribuidor","dto_fijo"];
   if(importType==="productos") cols=["linea","marca","nombre","codigo","presentacion","precio","unidad"];
   if(importType==="usuarios") cols=["nombre","apellido","email","password","rol","status"];
   const ws=XLSX.utils.json_to_sheet([cols.reduce((a,c)=>({...a,[c]:""}),{})],{header:cols});
@@ -2013,7 +2050,7 @@ function exportarClientesExcel(){
   if(!CLIENTS.length){ toast("No hay clientes para exportar.","info"); return; }
   const rows=CLIENTS.slice().sort((a,b)=>String(a.nombre||"").localeCompare(String(b.nombre||""),"es")).map(c=>{
     const sup=USERS.find(u=>u.id===(c.supervisorId||c.supervisor_id));
-    return {nombre:c.nombre||"",codigo:c.codigo||"",canal:c.canal||"",departamento:c.departamento||"",direccion:c.direccion||"",distribuidor:c.distribuidor||"",dto_fijo:Number(c.dto)||0,supervisor:sup?userName(sup):""};
+    return {nombre:c.nombre||"",razon_social:c.razon_social||"",codigo:c.codigo||"",canal:c.canal||"",departamento:c.departamento||"",direccion:c.direccion||"",distribuidor:c.distribuidor||"",dto_fijo:Number(c.dto)||0,supervisor:sup?userName(sup):""};
   });
   const ws=XLSX.utils.json_to_sheet(rows); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Clientes");
   XLSX.writeFile(wb,`Clientes_${new Date().toISOString().slice(0,10)}.xlsx`);
@@ -2028,7 +2065,7 @@ function exportarProductosExcel(){
 }
 function exportarExcel(){
   const visible=getVisiblePedidos();
-  const rows=visible.map(p=>({"ID Pedido":p.id,"Fecha":p.fecha,"Vendedor/Supervisor":p.userName,"Cliente":p.clienteNombre,"Distribuidor":p.distribuidor,"Departamento":p.departamento,"Líneas":pedidoLineasTexto(p),"Items":p.lineas?.length||0,"Total Solicitado ($)":p.total,"Monto Facturado ($)":p.montofacturado||0,"Diferencia ($)":p.montofacturado!=null?(p.total-p.montofacturado):0,"Estado":p.estado,"Notas":p.notas}));
+  const rows=visible.map(p=>({"ID Pedido":p.id,"Fecha":p.fecha,"Vendedor/Supervisor":p.userName,"Cliente":p.clienteNombre,"Razón social":p.razonSocial||"","Distribuidor":p.distribuidor,"Departamento":p.departamento,"Líneas":pedidoLineasTexto(p),"Items":p.lineas?.length||0,"Total Solicitado ($)":p.total,"Monto Facturado ($)":p.montofacturado||0,"Diferencia ($)":p.montofacturado!=null?(p.total-p.montofacturado):0,"Estado":p.estado,"Notas":p.notas}));
   const ws=XLSX.utils.json_to_sheet(rows); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Pedidos");
   XLSX.writeFile(wb,`Reporte_Pedidos_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
@@ -2040,7 +2077,7 @@ function globalSearch(q){
   const tbody=document.getElementById("tbody-pedidos"); if(!tbody)return;
   document.getElementById("page-title").textContent="Búsqueda Global";
   document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active")); document.getElementById("screen-pedidos").classList.add("active");
-  tbody.innerHTML=filtered.map(p=>`<tr><td><span class="mono fw-bold text-red">${p.id}</span></td><td>${p.fecha}</td><td>${p.userName}</td><td><strong>${escHtml(p.clienteNombre)}</strong></td><td>${escHtml(p.distribuidor||"—")}</td><td>${p.departamento}</td><td>${pedidoLineasResumen(p)}</td><td style="text-align:center">${p.lineas.length}</td><td style="text-align:right;font-weight:700">$${fmt(p.total)}</td><td style="text-align:right">$${fmt(p.montofacturado)}</td><td style="text-align:right">${p.montofacturado!=null?fmt(p.total-p.montofacturado):"—"}</td><td>${estadoBadge(p.estado)}</td><td><button class="btn btn-ghost btn-sm" onclick="editPedido('${p.id}')">✏</button></td></tr>`).join("")||`<tr><td colspan="13" style="text-align:center;padding:30px;color:var(--text2)">Sin resultados.</td></tr>`;
+  tbody.innerHTML=filtered.map(p=>`<tr><td><span class="mono fw-bold text-red">${p.id}</span></td><td>${p.fecha}</td><td>${p.userName}</td><td><strong>${escHtml(p.clienteNombre)}</strong>${p.razonSocial?`<div style="font-size:11px;color:var(--text2);font-weight:400">${escHtml(p.razonSocial)}</div>`:""}</td><td>${escHtml(p.distribuidor||"—")}</td><td>${p.departamento}</td><td>${pedidoLineasResumen(p)}</td><td style="text-align:center">${p.lineas.length}</td><td style="text-align:right;font-weight:700">$${fmt(p.total)}</td><td style="text-align:right">$${fmt(p.montofacturado)}</td><td style="text-align:right">${p.montofacturado!=null?fmt(p.total-p.montofacturado):"—"}</td><td>${estadoBadge(p.estado)}</td><td><button class="btn btn-ghost btn-sm" onclick="editPedido('${p.id}')">✏</button></td></tr>`).join("")||`<tr><td colspan="13" style="text-align:center;padding:30px;color:var(--text2)">Sin resultados.</td></tr>`;
 }
 function renderPerfil(){
   document.getElementById("perfil-body").innerHTML=`<div class="profile-section"><div class="profile-section-title">Información de Seguridad del Usuario</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:20px"><div><div class="form-group"><label class="form-label">Nombre Completo</label><input type="text" class="readonly-field" readonly value="${escHtml(userName(currentUser))}"></div><div class="form-group"><label class="form-label">Identificador Único (UID)</label><input type="text" class="readonly-field mono" readonly value="${currentUser.id}"></div></div><div><div class="form-group"><label class="form-label">Correo Electrónico Corporativo</label><input type="text" class="readonly-field" readonly value="${currentUser.email}"></div><div class="form-group"><label class="form-label">Rol Operativo Asignado</label><input type="text" class="readonly-field" style="text-transform:capitalize" readonly value="${currentUser.role}"></div></div></div></div><div class="profile-section"><div class="profile-section-title">Actualizar Contraseña Corporativa</div><div style="max-width:320px"><div class="form-group"><label class="form-label">Nueva Contraseña <span class="required-star">*</span></label><input type="password" id="perf-p1" placeholder="Mínimo 6 caracteres"></div><div class="form-group"><label class="form-label">Confirmar Contraseña <span class="required-star">*</span></label><input type="password" id="perf-p2" placeholder="Repetir nueva contraseña"></div><button class="btn btn-primary" onclick="updatePerfilPass()">🔒 Guardar Nueva Contraseña</button></div></div>`;

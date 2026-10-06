@@ -431,6 +431,7 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
           <button class="btn btn-ghost btn-sm" id="adm-tab-clientes" onclick="admTab('clientes')" style="font-weight:700">Clientes</button>
           <button class="btn btn-ghost btn-sm" id="adm-tab-usuarios" onclick="admTab('usuarios')">Usuarios</button>
           <button class="btn btn-ghost btn-sm" id="adm-tab-productos" onclick="admTab('productos')">Productos</button>
+          <button class="btn btn-ghost btn-sm" id="adm-tab-impuestos" onclick="admTab('impuestos')">Impuestos</button>
         </div>
         <div id="adm-clientes">
           <div class="flex-between mb-4"><input type="text" placeholder="Buscar..." id="adm-cli-search" style="width:200px" oninput="renderAdmClientes()"><div class="flex"><button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="borrarTodoBase('clientes')" title="Elimina toda la base de clientes y abre el importador">🗑 Eliminar todo y recargar</button><button class="btn btn-ghost btn-sm" onclick="exportarClientesExcel()">⬇ Exportar Excel</button><button class="btn btn-ghost btn-sm" onclick="openImportModal('clientes')">⬆ Importar Excel</button><button class="btn btn-primary btn-sm" onclick="openClienteModal()">+ Nuevo cliente</button></div></div>
@@ -443,6 +444,10 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
         <div id="adm-productos" style="display:none">
           <div class="flex-between mb-4"><span style="font-size:12px;color:var(--text2)">Catálogo de productos</span><div class="flex"><button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="borrarTodoBase('productos')" title="Elimina todo el catálogo y abre el importador">🗑 Eliminar todo y recargar</button><button class="btn btn-ghost btn-sm" onclick="exportarProductosExcel()">⬇ Exportar Excel</button><button class="btn btn-ghost btn-sm" onclick="openImportModal('productos')">⬆ Importar / Actualizar Excel</button><button class="btn btn-primary btn-sm" onclick="openProductoModal()">+ Nuevo producto</button></div></div>
           <div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table><thead><tr><th>Línea</th><th>Marca</th><th>Producto</th><th>Código</th><th>Presentación</th><th>Unidad de venta</th><th>Precio</th><th></th></tr></thead><tbody id="tbody-adm-productos"></tbody></table></div></div>
+        </div>
+        <div id="adm-impuestos" style="display:none">
+          <div class="flex-between mb-4"><span style="font-size:12px;color:var(--text2)">Tasas de impuesto que después se asignan a los productos</span><button class="btn btn-primary btn-sm" onclick="openImpuestoModal()">+ Nuevo impuesto</button></div>
+          <div class="card" style="padding:0;overflow:hidden"><div class="table-wrap"><table><thead><tr><th>Descripción</th><th style="text-align:right">Porcentaje</th><th style="text-align:right">Ejemplo sobre $100</th><th>Productos que lo usan</th><th></th></tr></thead><tbody id="tbody-adm-impuestos"></tbody></table></div></div>
         </div>
       </div>
       <div id="screen-perfil" class="screen"><div id="perfil-body"></div></div>
@@ -542,6 +547,16 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-impuesto">
+  <div class="modal" style="width:420px">
+    <div class="flex-between mb-4"><div class="modal-title" id="modal-imp-title">Nuevo impuesto</div><button class="btn btn-ghost btn-sm" onclick="closeModal('modal-impuesto')">✕</button></div>
+    <div class="form-group"><label class="form-label">Descripción <span class="required-star">*</span></label><input type="text" id="imp-descripcion" placeholder="Ej: IVA tasa básica"></div>
+    <div class="form-group"><label class="form-label">Porcentaje % <span class="required-star">*</span></label><input type="number" id="imp-porcentaje" placeholder="22" min="0" max="100" step="0.01" oninput="impPreview()" onkeydown="if(event.key==='Enter')saveImpuesto()"></div>
+    <div id="imp-preview" style="font-size:12px;color:var(--text2);background:var(--surface);border-radius:8px;padding:9px 12px;margin-bottom:16px">Ingresá el porcentaje para ver un ejemplo.</div>
+    <div class="flex" style="justify-content:flex-end;gap:8px"><button class="btn btn-ghost" onclick="closeModal('modal-impuesto')">Cancelar</button><button class="btn btn-primary" id="btn-save-imp" onclick="saveImpuesto()">Guardar impuesto</button></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-usuario">
   <div class="modal" style="width:480px">
     <div class="flex-between mb-4"><div class="modal-title" id="modal-user-title">Nuevo usuario</div><button class="btn btn-ghost btn-sm" onclick="closeModal('modal-usuario')">✕</button></div>
@@ -616,9 +631,9 @@ async function sendInviteEmail(toEmail, toName, password){
 const DEPTOS_UY=["Artigas","Canelones","Cerro Largo","Colonia","Durazno","Flores","Florida","Lavalleja","Maldonado","Montevideo","Paysandú","Río Negro","Rivera","Rocha","Salto","San José","Soriano","Tacuarembó","Treinta y Tres"];
 const LINEAS_NEGOCIO=["KENVUE","ADES","FORTYLEX","AYUDIN"];
 
-let USERS=[], PRODUCTS=[], CLIENTS=[], PEDIDOS=[], METAS=[];
+let USERS=[], PRODUCTS=[], CLIENTS=[], PEDIDOS=[], METAS=[], IMPUESTOS=[];
 let currentUser=null, pendingFirstLoginUser=null;
-let editingPedidoId=null, editingClienteId=null, editingProductoId=null, editingUserId=null, facturandoId=null;
+let editingPedidoId=null, editingClienteId=null, editingProductoId=null, editingUserId=null, facturandoId=null, editingImpuestoId=null;
 let lineas=[];
 let importType=null, importParsedData=[], importErrors=[];
 let chartSup=null, chartLinea=null, chartRatio=null, chartEstados=null, chartEvol=null, chartDepto=null, chartDeptoM=null;
@@ -669,6 +684,7 @@ function loadDemoData(){
   PRODUCTS=DEMO.products.map(p=>({...p}));
   CLIENTS=DEMO.clients.map(c=>({...c,supervisorId:c.supervisor_id}));
   PEDIDOS=[]; METAS=[];
+  IMPUESTOS=[{id:1,descripcion:"IVA tasa básica",porcentaje:22},{id:2,descripcion:"IVA tasa mínima",porcentaje:10},{id:3,descripcion:"Exento",porcentaje:0}];
 }
 
 // ════════════════════════════════════════════════
@@ -780,6 +796,9 @@ async function loadAllData(){
       return {...c, supervisorId: c.supervisor_id, departamento: (dep||"")};
     });
     PEDIDOS.forEach(p=>{p.lineas = p.lineas.map(l=>({...l,productoId:l.producto_id,dtoFijo:l.dto_fijo,dtoEsp:l.dto_esp}));});
+    // Impuestos: se cargan aparte para que, si la tabla todavía no existe, el resto del sistema siga funcionando
+    try { IMPUESTOS=(await fetchAll("impuestos")).map(i=>({...i,porcentaje:Number(i.porcentaje)||0})); }
+    catch(err){ IMPUESTOS=[]; console.warn("Tabla impuestos no disponible:", err.message); }
   } catch(e) {
     toast("Error al cargar datos: "+e.message, "error", 6000);
     console.error(e);
@@ -823,6 +842,16 @@ async function dbSaveProduct(obj, id=null){
   let res; if(id){ res=await db.from("products").update(row).eq("id",id).select().single(); } else { res=await db.from("products").insert(row).select().single(); }
   if(res.error) throw res.error; return res.data;
 }
+async function dbSaveImpuesto(obj, id=null){
+  if(DEMO_MODE){
+    if(id){ const i=IMPUESTOS.findIndex(x=>x.id===id); if(i>-1) IMPUESTOS[i]={...IMPUESTOS[i],...obj}; return IMPUESTOS[i]; }
+    const ni={id:Date.now(),...obj}; IMPUESTOS.push(ni); return ni;
+  }
+  const row={descripcion:obj.descripcion,porcentaje:Number(obj.porcentaje)||0};
+  let res; if(id){ res=await db.from("impuestos").update(row).eq("id",id).select().single(); } else { res=await db.from("impuestos").insert(row).select().single(); }
+  if(res.error) throw res.error; return res.data;
+}
+async function dbDeleteImpuesto(id){ if(DEMO_MODE){IMPUESTOS=IMPUESTOS.filter(x=>x.id!==id);return;} const r=await db.from("impuestos").delete().eq("id",id); if(r.error) throw r.error; }
 async function dbDeleteProduct(id){ if(DEMO_MODE){PRODUCTS=PRODUCTS.filter(p=>p.id!==id);return;} const r=await db.from("products").delete().eq("id",id); if(r.error) throw r.error; }
 
 async function dbSaveOrder(pedido, id=null){
@@ -1761,8 +1790,8 @@ function renderAlertas(){
 }
 
 function admTab(t){
-  ["clientes","usuarios","productos"].forEach(x=>{ document.getElementById("adm-"+x).style.display=x===t?"block":"none"; document.getElementById("adm-tab-"+x).style.fontWeight=x===t?"700":"400"; });
-  if(t==="clientes") renderAdmClientes(); if(t==="usuarios") renderAdmUsuarios(); if(t==="productos") renderAdmProductos();
+  ["clientes","usuarios","productos","impuestos"].forEach(x=>{ document.getElementById("adm-"+x).style.display=x===t?"block":"none"; document.getElementById("adm-tab-"+x).style.fontWeight=x===t?"700":"400"; });
+  if(t==="clientes") renderAdmClientes(); if(t==="usuarios") renderAdmUsuarios(); if(t==="productos") renderAdmProductos(); if(t==="impuestos") renderAdmImpuestos();
 }
 function renderAdmClientes(){
   const q=(document.getElementById("adm-cli-search").value||"").toLowerCase();
@@ -1869,6 +1898,64 @@ async function saveProducto(){
 async function deleteProducto(id){
   if(!await confirmDialog("¿Eliminar este producto del catálogo?",{title:"Eliminar producto",okText:"Eliminar",danger:true}))return; setLoading("Eliminando...");
   try { await dbDeleteProduct(id); toast("Producto eliminado","success"); await loadAllData(); renderAdmProductos(); }
+  catch(e){ toast("Error: "+e.message,"error"); }
+  hideLoading();
+}
+
+// ════════════════════════════════════════════════
+// IMPUESTOS (IVA y otras tasas)
+// ════════════════════════════════════════════════
+const fmtPct=n=>Number(n||0).toLocaleString("es-AR",{maximumFractionDigits:2})+"%";
+function impuestoEnUso(id){ return PRODUCTS.filter(p=>String(p.impuesto_id||"")===String(id)).length; }
+function renderAdmImpuestos(){
+  const tb=document.getElementById("tbody-adm-impuestos"); if(!tb)return;
+  if(!IMPUESTOS.length){
+    tb.innerHTML=`<tr><td colspan="5" style="text-align:center;padding:28px;color:var(--text2)">Todavía no hay impuestos cargados.<br><button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="openImpuestoModal()">+ Cargar el primero</button></td></tr>`;
+    return;
+  }
+  const lista=[...IMPUESTOS].sort((a,b)=>b.porcentaje-a.porcentaje||String(a.descripcion).localeCompare(b.descripcion));
+  tb.innerHTML=lista.map(i=>{
+    const usos=impuestoEnUso(i.id);
+    return `<tr><td><strong>${escHtml(i.descripcion)}</strong></td><td class="mono" style="text-align:right;font-weight:700;color:var(--crimson)">${fmtPct(i.porcentaje)}</td><td class="mono" style="text-align:right;color:var(--text2)">$100,00 → $${fmt(100*(1+i.porcentaje/100))}</td><td>${usos?`<span class="badge badge-blue">${usos} producto${usos===1?"":"s"}</span>`:'<span style="color:var(--text3)">—</span>'}</td><td><div class="flex"><button class="btn btn-ghost btn-sm" onclick="openImpuestoModal(${i.id})" title="Editar">✏</button><button class="btn btn-ghost btn-sm" style="color:var(--accent)" onclick="deleteImpuesto(${i.id})" title="Eliminar">🗑</button></div></td></tr>`;
+  }).join("");
+}
+function impPreview(){
+  const el=document.getElementById("imp-preview"); const raw=document.getElementById("imp-porcentaje").value;
+  if(raw===""){ el.textContent="Ingresá el porcentaje para ver un ejemplo."; return; }
+  const pct=Number(raw);
+  if(isNaN(pct)||pct<0||pct>100){ el.innerHTML='<span style="color:var(--accent)">El porcentaje tiene que estar entre 0 y 100.</span>'; return; }
+  el.innerHTML=`Ejemplo: un neto de <strong>$1.000,00</strong> lleva <strong>$${fmt(1000*pct/100)}</strong> de impuesto y queda en <strong>$${fmt(1000*(1+pct/100))}</strong>.`;
+}
+function openImpuestoModal(id=null){
+  editingImpuestoId=id;
+  const i=id?IMPUESTOS.find(x=>x.id===id):null;
+  document.getElementById("modal-imp-title").textContent=i?"Editar impuesto":"Nuevo impuesto";
+  document.getElementById("imp-descripcion").value=i?i.descripcion:"";
+  document.getElementById("imp-porcentaje").value=i?i.porcentaje:"";
+  impPreview();
+  document.getElementById("modal-impuesto").classList.add("open");
+  setTimeout(()=>document.getElementById("imp-descripcion").focus(),50);
+}
+async function saveImpuesto(){
+  const descripcion=document.getElementById("imp-descripcion").value.trim();
+  const raw=document.getElementById("imp-porcentaje").value;
+  const porcentaje=Number(raw);
+  if(!descripcion){ toast("Escribí una descripción para el impuesto.","error"); return; }
+  if(raw===""||isNaN(porcentaje)||porcentaje<0||porcentaje>100){ toast("El porcentaje tiene que ser un número entre 0 y 100.","error"); return; }
+  const dup=IMPUESTOS.find(x=>x.id!==editingImpuestoId && String(x.descripcion).trim().toLowerCase()===descripcion.toLowerCase());
+  if(dup){ toast(`Ya existe un impuesto llamado "${dup.descripcion}".`,"error"); return; }
+  setLoading("Guardando impuesto...");
+  try { await dbSaveImpuesto({descripcion,porcentaje}, editingImpuestoId); toast("Impuesto guardado","success"); closeModal('modal-impuesto'); if(!DEMO_MODE) await loadAllData(); renderAdmImpuestos(); }
+  catch(e){ toast("Error al guardar el impuesto: "+e.message+(/relation|does not exist|schema cache/i.test(e.message)?" (falta crear la tabla impuestos en Supabase)":""),"error",8000); }
+  hideLoading();
+}
+async function deleteImpuesto(id){
+  const i=IMPUESTOS.find(x=>x.id===id); if(!i)return;
+  const usos=impuestoEnUso(id);
+  if(usos){ toast(`No se puede eliminar: ${usos} producto${usos===1?" usa":"s usan"} "${i.descripcion}". Cambiales el impuesto primero.`,"error",7000); return; }
+  if(!await confirmDialog(`¿Eliminar el impuesto "${i.descripcion}" (${fmtPct(i.porcentaje)})?`,{title:"Eliminar impuesto",okText:"Eliminar",danger:true}))return;
+  setLoading("Eliminando...");
+  try { await dbDeleteImpuesto(id); toast("Impuesto eliminado","success"); if(!DEMO_MODE) await loadAllData(); renderAdmImpuestos(); }
   catch(e){ toast("Error: "+e.message,"error"); }
   hideLoading();
 }

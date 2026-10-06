@@ -194,6 +194,14 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
 .profile-section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--crimson2);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--border)}
 .status-dot{width:8px;height:8px;border-radius:50%;display:inline-block}.status-active{background:var(--green)}.status-inactive{background:var(--text3)}
 ::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+/* Filtro rango de fechas (pedidos) */
+.fecha-rango{display:flex;align-items:center;gap:6px;background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:2px 4px 2px 10px}
+.fecha-rango:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+.fecha-rango label{font-size:11px;font-weight:600;color:var(--text2);white-space:nowrap}
+#screen-pedidos .fecha-rango input[type=date]{border:none;box-shadow:none;padding:5px 4px;width:132px!important;background:transparent}
+.fecha-rango button{border:none;background:var(--surface2);color:var(--text2);border-radius:6px;width:24px;height:24px;cursor:pointer;font-size:11px;flex-shrink:0}
+.fecha-rango button:hover{background:var(--accent-light);color:var(--accent)}
+@media (max-width:860px){.fecha-rango{flex-wrap:wrap}}
 .readonly-field{background:var(--surface);color:var(--text2);cursor:not-allowed}
 .demo-pill{background:var(--yellow-bg);color:var(--yellow-text);border:1px solid #f0d089;border-radius:20px;padding:3px 10px;font-size:10px;font-weight:700;letter-spacing:.04em}
 /* Barra de progreso superior (carga fina) */
@@ -375,7 +383,7 @@ textarea{resize:vertical}.required-star{color:var(--accent);font-size:12px}
             <select id="filtro-estado" onchange="renderPedidos()" style="width:180px"><option value="">Todos los estados</option><option>Pendiente de corroboración</option><option>Facturado</option><option>No facturado</option><option>Facturado parcial</option></select>
             <select id="filtro-depto" onchange="renderPedidos()" style="width:180px"><option value="">Todos los departamentos</option></select>
             <select id="filtro-linea" onchange="renderPedidos()" style="width:160px"><option value="">Todas las líneas</option></select>
-            <input type="date" id="filtro-fecha" onchange="renderPedidos()" style="width:148px">
+            <div class="fecha-rango" title="Filtrar por rango de fechas"><label for="filtro-desde">Desde</label><input type="date" id="filtro-desde" onchange="onRangoFechaChange('desde')"><label for="filtro-hasta">Hasta</label><input type="date" id="filtro-hasta" onchange="onRangoFechaChange('hasta')"><button type="button" id="filtro-fecha-clear" onclick="limpiarRangoFechas()" title="Quitar filtro de fechas" style="display:none">✕</button></div>
           </div>
           <div class="flex">
             <button class="btn btn-ghost btn-sm" onclick="exportarExcel()">⬇ Excel</button>
@@ -1261,15 +1269,34 @@ function renderChartDepto(ped,canvasId){
 
 function estadoBadge(e){const m={"Facturado":"badge-green","Pendiente de corroboración":"badge-yellow","No facturado":"badge-red","Facturado parcial":"badge-blue"}; return`<span class="badge ${m[e]||""}">${e}</span>`;}
 function pedidoLineasResumen(p){if(!p.lineas?.length)return"-"; return[...new Set(p.lineas.map(l=>l.linea).filter(Boolean))].map(l=>`<span class="badge badge-crimson" style="margin:1px">${l}</span>`).join("");}
+// Fecha del pedido en formato AAAA-MM-DD (usa fecha_iso; si falta, interpreta "d/m/aaaa")
+function pedidoFechaISO(p){
+  if(p.fechaISO) return String(p.fechaISO).slice(0,10);
+  const m=String(p.fecha||"").match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  return m?`${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`:"";
+}
+function onRangoFechaChange(campo){
+  const d=document.getElementById("filtro-desde"), h=document.getElementById("filtro-hasta");
+  // Si quedan al revés, se acomodan solas
+  if(d.value&&h.value&&d.value>h.value){ const t=d.value; d.value=h.value; h.value=t; }
+  h.min=d.value||""; d.max=h.value||"";
+  document.getElementById("filtro-fecha-clear").style.display=(d.value||h.value)?"":"none";
+  renderPedidos();
+}
+function limpiarRangoFechas(){
+  ["filtro-desde","filtro-hasta"].forEach(id=>{ const el=document.getElementById(id); el.value=""; el.min=""; el.max=""; });
+  document.getElementById("filtro-fecha-clear").style.display="none";
+  renderPedidos();
+}
 function renderPedidos(){
   const ped=getVisiblePedidos();
   const fc=(document.getElementById("filtro-cliente").value||"").toLowerCase();
   const fe=document.getElementById("filtro-estado").value;
-  const ff=document.getElementById("filtro-fecha").value;
+  const fDesde=document.getElementById("filtro-desde").value, fHasta=document.getElementById("filtro-hasta").value;
   const fd=document.getElementById("filtro-depto").value;
   const fl=document.getElementById("filtro-linea")?.value||"";
-  const filtered=ped.filter(p=>{if(fc&&!p.clienteNombre.toLowerCase().includes(fc))return false; if(fe&&p.estado!==fe)return false; if(ff&&p.fechaISO!==ff)return false; if(fd&&p.departamento!==fd)return false; if(fl&&!(p.lineas||[]).some(l=>l.linea===fl))return false; return true;}).sort((a,b)=>String(b.id).localeCompare(String(a.id)));
-  const sig=JSON.stringify([fc,fe,ff,fd,fl,filtered.length]);
+  const filtered=ped.filter(p=>{if(fc&&!p.clienteNombre.toLowerCase().includes(fc))return false; if(fe&&p.estado!==fe)return false; if(fDesde||fHasta){ const fi=pedidoFechaISO(p); if(!fi)return false; if(fDesde&&fi<fDesde)return false; if(fHasta&&fi>fHasta)return false; } if(fd&&p.departamento!==fd)return false; if(fl&&!(p.lineas||[]).some(l=>l.linea===fl))return false; return true;}).sort((a,b)=>String(b.id).localeCompare(String(a.id)));
+  const sig=JSON.stringify([fc,fe,fDesde,fHasta,fd,fl,filtered.length]);
   if(sig!==_pedSig){ _pedSig=sig; pedidosPage=1; }
   const totalPages=Math.max(1,Math.ceil(filtered.length/PAGE_SIZE));
   if(pedidosPage>totalPages) pedidosPage=totalPages;

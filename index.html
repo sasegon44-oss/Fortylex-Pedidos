@@ -1288,14 +1288,24 @@ function limpiarRangoFechas(){
   document.getElementById("filtro-fecha-clear").style.display="none";
   renderPedidos();
 }
+// Filtros actuales de la pantalla Pedidos (los usa la tabla y la exportación a Excel)
+function getFiltrosPedidos(){
+  return {
+    fc:(document.getElementById("filtro-cliente").value||"").toLowerCase(),
+    fe:document.getElementById("filtro-estado").value,
+    fDesde:document.getElementById("filtro-desde").value,
+    fHasta:document.getElementById("filtro-hasta").value,
+    fd:document.getElementById("filtro-depto").value,
+    fl:document.getElementById("filtro-linea")?.value||""
+  };
+}
+function getPedidosFiltrados(){
+  const {fc,fe,fDesde,fHasta,fd,fl}=getFiltrosPedidos();
+  return getVisiblePedidos().filter(p=>{if(fc&&!String(p.clienteNombre||"").toLowerCase().includes(fc))return false; if(fe&&p.estado!==fe)return false; if(fDesde||fHasta){ const fi=pedidoFechaISO(p); if(!fi)return false; if(fDesde&&fi<fDesde)return false; if(fHasta&&fi>fHasta)return false; } if(fd&&p.departamento!==fd)return false; if(fl&&!(p.lineas||[]).some(l=>l.linea===fl))return false; return true;}).sort((a,b)=>String(b.id).localeCompare(String(a.id)));
+}
 function renderPedidos(){
-  const ped=getVisiblePedidos();
-  const fc=(document.getElementById("filtro-cliente").value||"").toLowerCase();
-  const fe=document.getElementById("filtro-estado").value;
-  const fDesde=document.getElementById("filtro-desde").value, fHasta=document.getElementById("filtro-hasta").value;
-  const fd=document.getElementById("filtro-depto").value;
-  const fl=document.getElementById("filtro-linea")?.value||"";
-  const filtered=ped.filter(p=>{if(fc&&!p.clienteNombre.toLowerCase().includes(fc))return false; if(fe&&p.estado!==fe)return false; if(fDesde||fHasta){ const fi=pedidoFechaISO(p); if(!fi)return false; if(fDesde&&fi<fDesde)return false; if(fHasta&&fi>fHasta)return false; } if(fd&&p.departamento!==fd)return false; if(fl&&!(p.lineas||[]).some(l=>l.linea===fl))return false; return true;}).sort((a,b)=>String(b.id).localeCompare(String(a.id)));
+  const {fc,fe,fDesde,fHasta,fd,fl}=getFiltrosPedidos();
+  const filtered=getPedidosFiltrados();
   const sig=JSON.stringify([fc,fe,fDesde,fHasta,fd,fl,filtered.length]);
   if(sig!==_pedSig){ _pedSig=sig; pedidosPage=1; }
   const totalPages=Math.max(1,Math.ceil(filtered.length/PAGE_SIZE));
@@ -2178,10 +2188,47 @@ function exportarProductosExcel(){
   toast(`Se exportaron ${rows.length} productos. Editá precios o datos y volvé a importarlo para actualizar.`,"success",6000);
 }
 function exportarExcel(){
-  const visible=getVisiblePedidos();
-  const rows=visible.map(p=>({"ID Pedido":p.id,"Fecha":p.fecha,"Vendedor/Supervisor":p.userName,"Cliente":p.clienteNombre,"Razón social":p.razonSocial||"","Distribuidor":p.distribuidor,"Departamento":p.departamento,"Líneas":pedidoLineasTexto(p),"Items":p.lineas?.length||0,"Total Solicitado ($)":p.total,"Monto Facturado ($)":p.montofacturado||0,"Diferencia ($)":p.montofacturado!=null?(p.total-p.montofacturado):0,"Estado":p.estado,"Notas":p.notas}));
-  const ws=XLSX.utils.json_to_sheet(rows); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Pedidos");
-  XLSX.writeFile(wb,`Reporte_Pedidos_${new Date().toISOString().slice(0,10)}.xlsx`);
+  const {fc,fe,fDesde,fHasta,fd,fl}=getFiltrosPedidos();
+  const peds=getPedidosFiltrados();
+  if(!peds.length){ toast("No hay pedidos con los filtros aplicados.","info"); return; }
+  const r2=n=>Math.round((Number(n)||0)*100)/100;
+  // Hoja 1: un renglón por pedido. Si se filtró una línea de negocio, se agrega
+  // el monto que corresponde solo a esa línea (con los dtos. del pedido aplicados).
+  const resumen=peds.map(p=>{
+    const row={"ID Pedido":p.id,"Fecha":p.fecha,"Vendedor/Supervisor":p.userName,"Cliente":p.clienteNombre,"Razón social":p.razonSocial||"","Distribuidor":p.distribuidor||"","Departamento":p.departamento||"","Líneas":pedidoLineasTexto(p),"Items":p.lineas?.length||0};
+    if(fl){ const sub=(p.lineas||[]).filter(l=>l.linea===fl).reduce((a,l)=>a+lineaTotalCalc(l),0); row[`Monto ${fl} ($)`]=r2(totalConDtosPedido(p,sub)); }
+    row["Total Solicitado ($)"]=r2(p.total);
+    row["Monto Facturado ($)"]=p.montofacturado!=null?r2(p.montofacturado):"";
+    row["Diferencia ($)"]=p.montofacturado!=null?r2(p.total-p.montofacturado):"";
+    row["Estado"]=p.estado; row["Notas"]=p.notas||"";
+    return row;
+  });
+  // Hoja 2: un renglón por producto. Así un pedido con 2 o más líneas de negocio
+  // queda separado y se puede sumar por línea. Si hay filtro de línea, solo esa.
+  const detalle=[];
+  peds.forEach(p=>(p.lineas||[]).forEach(l=>{
+    if(fl&&l.linea!==fl) return;
+    const tl=lineaTotalCalc(l);
+    detalle.push({"ID Pedido":p.id,"Fecha":p.fecha,"Vendedor/Supervisor":p.userName,"Cliente":p.clienteNombre,"Razón social":p.razonSocial||"","Distribuidor":p.distribuidor||"","Departamento":p.departamento||"","Línea":l.linea||"","Marca":l.marca||"","Producto":l.nombre||"","Código":l.codigo||"","Presentación":l.presentacion||"","Cantidad":Number(l.cantidad)||0,"Unidad":l.unidad||"","Precio s/IVA ($)":r2(l.precio),"Dto. Esp. %":Number(l.dtoEsp)||0,"Total línea ($)":r2(tl),"Dto. fijo pedido %":Number(p.dtoFijo)||0,"Dto. extra pedido %":Number(p.dtoExtra)||0,"Total neto c/dtos pedido ($)":r2(totalConDtosPedido(p,tl)),"Estado":p.estado,"Observ.":l.obs||""});
+  }));
+  // Hoja 3: qué filtros se usaron
+  const fISO=s=>s?s.split("-").reverse().join("/"):"";
+  const filtros=[
+    {"Filtro":"Cliente","Valor":fc||"(todos)"},{"Filtro":"Estado","Valor":fe||"(todos)"},
+    {"Filtro":"Departamento","Valor":fd||"(todos)"},{"Filtro":"Línea","Valor":fl||"(todas)"},
+    {"Filtro":"Desde","Valor":fISO(fDesde)||"(sin límite)"},{"Filtro":"Hasta","Valor":fISO(fHasta)||"(sin límite)"},
+    {"Filtro":"Pedidos exportados","Valor":peds.length},{"Filtro":"Generado","Valor":new Date().toLocaleString("es-AR")+" por "+userName(currentUser)}
+  ];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(resumen),"Pedidos");
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(detalle.length?detalle:[{"Sin líneas":""}]),"Detalle por producto");
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(filtros),"Filtros");
+  let nombre="Reporte_Pedidos";
+  if(fl) nombre+="_"+fl;
+  if(fDesde||fHasta) nombre+="_"+(fDesde||"inicio")+"_a_"+(fHasta||"hoy");
+  else nombre+="_"+todayISO();
+  XLSX.writeFile(wb,nombre+".xlsx");
+  toast(`Se exportaron ${peds.length} pedidos con los filtros aplicados.`,"success");
 }
 
 function globalSearch(q){
